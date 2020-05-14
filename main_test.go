@@ -19,16 +19,16 @@ func TestGetFriends(t *testing.T) {
 	}
 
 	var tests = []testInput{
-		{"76561197999662696", apiKey, false},
-		{"7656119807862962", apiKey, true},
-		{"76561197960435530", apiKey, false},
-		{"7656119796028793", apiKey, true},
-		{"76561198023414915", apiKey, false},
-		{"gibberish", apiKey, true},
+		{"76561197999662696", os.Getenv("APIKey"), false},
+		{"7656119807862962", os.Getenv("APIKey"), true},
+		{"76561197960435530", os.Getenv("APIKey"), false},
+		{"7656119796028793", os.Getenv("APIKey"), true},
+		{"76561198023414915", os.Getenv("APIKey"), false},
+		{"gibberish", os.Getenv("APIKey"), true},
 	}
 
 	for _, testCase := range tests {
-		_, err := GetFriends(testCase.steamID, apiKey)
+		_, err := GetFriends(testCase.steamID, os.Getenv("APIKey"))
 		// fmt.Println(testCase.steamID, testCase.shouldFail, err)
 		if err != nil {
 			if !testCase.shouldFail {
