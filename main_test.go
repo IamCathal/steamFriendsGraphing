@@ -1,11 +1,8 @@
 package main
 
 import (
-	"log"
 	"os"
 	"testing"
-
-	"github.com/joho/godotenv"
 )
 
 type testInput struct {
@@ -15,12 +12,6 @@ type testInput struct {
 }
 
 func TestGetFriends(t *testing.T) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	apiKey := os.Getenv("APIKey")
 
 	if _, err := os.Stat("userData/"); os.IsNotExist(err) {
 		// path/to/whatever does not exist
