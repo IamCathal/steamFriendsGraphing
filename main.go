@@ -119,7 +119,10 @@ func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 		friendsObj.FriendsList.Friends[i].Username = user.Personaname
 	}
 
-	WriteToFile(apiKey, steamID, friendsObj)
+	// if testing env is set, don't bother writing to file
+	if os.Getenv("testing") == "" {
+		WriteToFile(apiKey, steamID, friendsObj)
+	}
 
 	return friendsObj, nil
 }
@@ -190,10 +193,15 @@ func GetAPIKeys() ([]string, error) {
 }
 
 func main() {
+	if len(os.Args) < 3 {
+		log.Fatal("Invalid arguments entered")
+	}
+
 	apiKeys, err := GetAPIKeys()
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	level, err := strconv.Atoi(os.Args[2])
 	if err != nil {
 		log.Fatal("Invalid level entered")
