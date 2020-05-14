@@ -2,7 +2,10 @@ package main
 
 import (
 	"log"
+	"os"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
 type testInput struct {
@@ -12,22 +15,29 @@ type testInput struct {
 }
 
 func TestGetFriends(t *testing.T) {
-	apiKeys, err := GetAPIKeys()
+	err := godotenv.Load()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error loading .env file")
+	}
+
+	apiKey := os.Getenv("APIKey")
+
+	if _, err := os.Stat("userData/"); os.IsNotExist(err) {
+		// path/to/whatever does not exist
+		os.Mkdir("userData/", 0755)
 	}
 
 	var tests = []testInput{
-		{"76561198078629620", apiKeys[0], false},
-		{"7656119807862962", apiKeys[1], true},
-		{"76561197960435530", apiKeys[2], false},
-		{"7656119796028793", apiKeys[3], true},
-		{"76561198023414915", apiKeys[4], false},
-		{"gibberish", apiKeys[5], true},
+		{"76561197999662696", apiKey, false},
+		{"7656119807862962", apiKey, true},
+		{"76561197960435530", apiKey, false},
+		{"7656119796028793", apiKey, true},
+		{"76561198023414915", apiKey, false},
+		{"gibberish", apiKey, true},
 	}
 
-	for i, testCase := range tests {
-		_, err := GetFriends(testCase.steamID, apiKeys[i])
+	for _, testCase := range tests {
+		_, err := GetFriends(testCase.steamID, apiKey)
 		// fmt.Println(testCase.steamID, testCase.shouldFail, err)
 		if err != nil {
 			if !testCase.shouldFail {

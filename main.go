@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 )
 
 // IndivFriend holds indivial friend data
@@ -64,7 +65,6 @@ func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 	}
 
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", apiKey, steamID)
-	fmt.Println(targetURL)
 	res, err := http.Get(targetURL)
 	if err != nil {
 		log.Fatal(err)
@@ -190,27 +190,36 @@ func GetAPIKeys() ([]string, error) {
 }
 
 func main() {
-
 	apiKeys, err := GetAPIKeys()
 	if err != nil {
 		log.Fatal(err)
 	}
+	level, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		log.Fatal("Invalid level entered")
+	}
 
-	if len(os.Args) > 1 {
+	if _, err := os.Stat("userData/"); os.IsNotExist(err) {
+		// path/to/whatever does not exist
+		os.Mkdir("userData/", 0755)
+	}
+
+	if len(os.Args) > 0 {
 		friendsObj, err := GetFriends(os.Args[1], apiKeys[0])
 		if err != nil {
 			log.Fatal(err)
 		}
 		numFriends := len(friendsObj.FriendsList.Friends)
-		fmt.Printf("You have %d friends, this should take %d seconds to scrape at 1 level deep (friends of friends)\n", numFriends, numFriends*2)
-		for i, friend := range friendsObj.FriendsList.Friends {
-			_, err := GetFriends(friend.Steamid, apiKeys[i])
-			if err != nil {
-				log.Fatal(err)
+		if level > 1 {
+			fmt.Printf("You have %d friends, this should take %d seconds to scrape at %d level deep (friends of friends)\n", numFriends, numFriends*2, level)
+			for i, friend := range friendsObj.FriendsList.Friends {
+				_, err := GetFriends(friend.Steamid, apiKeys[i])
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Println("Using key " + apiKeys[i])
 			}
-			fmt.Println("Using key " + apiKeys[i])
 		}
-		// PrintDetails(friendsObj)
 
 	} else {
 		fmt.Println("Incorrect arguments")
