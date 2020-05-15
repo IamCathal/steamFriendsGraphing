@@ -21,12 +21,13 @@ type IndivFriend struct {
 	// Relationship is always friend in this case
 	FriendSince int64 `json:"friend_since,omitempty"`
 	// FriendSince, unix timestamp of when the friend request was accepted
-	Username string
+	Username string `json:"username"`
 	// Username is steam username
 }
 
 // FriendsStruct messy but it holds the array of all friends
 type FriendsStruct struct {
+	Username    string `json:"username"`
 	FriendsList struct {
 		Friends []IndivFriend `json:"friends"`
 	} `json:"friendslist"`
@@ -54,6 +55,12 @@ type UserStatsStruct struct {
 			Commentpermission        int    `json:"commentpermission,omitempty"`
 		} `json:"players"`
 	} `json:"response"`
+}
+
+func divmod(numerator, denominator int) (quotient, remainder int) {
+	quotient = numerator / denominator // integer division, decimals are truncated
+	remainder = numerator % denominator
+	return
 }
 
 // GetFriends Returns the list of friends of a user in friendsStruct format
@@ -86,7 +93,7 @@ func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 	match, _ = regexp.MatchString("(Forbidden)+", string(body))
 	if match {
 		var temp FriendsStruct
-		return temp, errors.New("Invalid API key")
+		return temp, errors.New("Invalid API key -" + apiKey)
 	}
 
 	// this part converts the steamIDs we
@@ -94,16 +101,91 @@ func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 
 	steamIDsList := ""
 	friendsListLen := len(friendsObj.FriendsList.Friends)
-	for ind, val := range friendsObj.FriendsList.Friends {
-		if ind < friendsListLen-1 {
-			steamIDsList += val.Steamid + ","
-		} else {
-			steamIDsList += val.Steamid
-		}
-	}
-	steamIDsList += ""
 
-	targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamIDsList)
+	callCount, remainder := divmod(friendsListLen, 100)
+
+	// less than 100 friends, only 1 call is needed
+	if callCount < 1 {
+
+		for ind, val := range friendsObj.FriendsList.Friends {
+			if ind < friendsListLen-1 {
+				steamIDsList += val.Steamid + ","
+			} else {
+				steamIDsList += val.Steamid
+			}
+		}
+		steamIDsList += ""
+
+		targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamIDsList)
+		res, err = http.Get(targetURL)
+		if err != nil {
+			log.Fatal(err)
+		}
+		body, err = ioutil.ReadAll(res.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var userStatsObj UserStatsStruct
+		json.Unmarshal(body, &userStatsObj)
+
+		for i, user := range userStatsObj.Response.Players {
+			friendsObj.FriendsList.Friends[i].Username = user.Personaname
+		}
+
+	} else {
+		// divide into calls of 100 friends and usernames to the friends struct
+
+		for i := 0; i <= callCount; i++ {
+			//each batch of 100
+
+			steamIDsList = ""
+
+			if i < callCount {
+				// a full call of 100 friends
+				for k := 0; k < 100; k++ {
+					// fmt.Println(k + (i * 100))
+					steamIDsList += friendsObj.FriendsList.Friends[k+(i*100)].Steamid + ","
+				}
+				fmt.Println("")
+			} else {
+				// a batch of the remainder (less than 100)
+				for k := 0; k < remainder; k++ {
+					steamIDsList += friendsObj.FriendsList.Friends[k+(i*100)].Steamid + ","
+					// fmt.Println(k + (i * 100))
+				}
+			}
+
+			targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamIDsList)
+			// fmt.Println(targetURL)
+			res, err = http.Get(targetURL)
+			if err != nil {
+				log.Fatal(err)
+			}
+			body, err = ioutil.ReadAll(res.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			var userStatsObj UserStatsStruct
+			json.Unmarshal(body, &userStatsObj)
+
+			if i < callCount {
+				for k := 0; k < 100; k++ {
+					friendsObj.FriendsList.Friends[k+(i*100)].Username = userStatsObj.Response.Players[k].Personaname
+				}
+			} else {
+				for k := 0; k < remainder; k++ {
+					friendsObj.FriendsList.Friends[k+(i*100)].Username = userStatsObj.Response.Players[k].Personaname
+				}
+			}
+
+		}
+
+	}
+
+	// get the target person's username
+	targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamID)
 	res, err = http.Get(targetURL)
 	if err != nil {
 		log.Fatal(err)
@@ -115,9 +197,7 @@ func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 	var userStatsObj UserStatsStruct
 	json.Unmarshal(body, &userStatsObj)
 
-	for i, user := range userStatsObj.Response.Players {
-		friendsObj.FriendsList.Friends[i].Username = user.Personaname
-	}
+	friendsObj.Username = userStatsObj.Response.Players[0].Personaname
 
 	// if testing env is set, don't bother writing to file
 	if os.Getenv("testing") == "" {
@@ -130,31 +210,19 @@ func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 // WriteToFile writes the friends to a file for later processing
 func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
 
-	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamID)
-	res, err := http.Get(targetURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var userStatsObj UserStatsStruct
-	json.Unmarshal(body, &userStatsObj)
-
-	fileLoc := fmt.Sprintf("userData/%s.txt", userStatsObj.Response.Players[0].Personaname)
+	fileLoc := fmt.Sprintf("userData/%s.json", steamID)
 	file, err := os.Create(fileLoc)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 
-	for _, val := range friends.FriendsList.Friends {
-		file.WriteString(val.Steamid + "\t" + val.Username + "\n")
-		if err != nil {
-			log.Fatal(err)
-		}
+	jsonObj, err := json.Marshal(friends)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	_ = ioutil.WriteFile(fileLoc, jsonObj, 0644)
 }
 
 // PrintDetails Returns a nicely formatted array of each friend's name
@@ -202,6 +270,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	numAPIKeys := len(apiKeys)
+
 	level, err := strconv.Atoi(os.Args[2])
 	if err != nil {
 		log.Fatal("Invalid level entered")
@@ -221,11 +291,12 @@ func main() {
 		if level > 1 {
 			fmt.Printf("You have %d friends, this should take %d seconds to scrape at %d level deep (friends of friends)\n", numFriends, numFriends*2, level)
 			for i, friend := range friendsObj.FriendsList.Friends {
-				_, err := GetFriends(friend.Steamid, apiKeys[i])
+				_, err := GetFriends(friend.Steamid, apiKeys[i%(numAPIKeys)])
+
 				if err != nil {
 					log.Fatal(err)
 				}
-				fmt.Println("Using key " + apiKeys[i])
+				// fmt.Println("Using key " + apiKeys[i])
 			}
 		}
 
