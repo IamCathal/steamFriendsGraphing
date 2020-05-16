@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"sync"
 	"testing"
 )
 
@@ -19,17 +20,19 @@ func TestGetFriends(t *testing.T) {
 	}
 
 	var tests = []testInput{
-		{"76561197999662696", os.Getenv("APIKey"), false},
+		{"76561198282036055", os.Getenv("APIKey"), false},
 		{"7656119807862962", os.Getenv("APIKey"), true},
-		{"76561197960435530", os.Getenv("APIKey"), false},
+		{"76561198271948679", os.Getenv("APIKey"), false},
 		{"7656119796028793", os.Getenv("APIKey"), true},
-		{"76561198023414915", os.Getenv("APIKey"), false},
+		{"76561198144084014", os.Getenv("APIKey"), false},
 		{"gibberish", os.Getenv("APIKey"), true},
 	}
 
+	var waitG sync.WaitGroup
+
 	for _, testCase := range tests {
-		_, err := GetFriends(testCase.steamID, os.Getenv("APIKey"))
-		// fmt.Println(testCase.steamID, testCase.shouldFail, err)
+		waitG.Add(1)
+		_, err := GetFriends(testCase.steamID, os.Getenv("APIKey"), &waitG)
 		if err != nil {
 			if !testCase.shouldFail {
 				t.Error("Error:", err,
@@ -41,5 +44,7 @@ func TestGetFriends(t *testing.T) {
 				"SteamID:", testCase.steamID,
 			)
 		}
+		waitG.Wait()
 	}
+
 }
