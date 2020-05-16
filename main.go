@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -59,13 +60,15 @@ type UserStatsStruct struct {
 	} `json:"response"`
 }
 
-func divmod(numerator, denominator int) (quotient, remainder int) {
-	quotient = numerator / denominator // integer division, decimals are truncated
+// Divmod divices a friendslist into stacks of 100 and the remainder
+func Divmod(numerator, denominator int) (quotient, remainder int) {
+	quotient = numerator / denominator
 	remainder = numerator % denominator
 	return
 }
 
-func logCall(method, steamID, username, status, statusColor string, roundTripTime int64) {
+// LogCall logs a HTTP call to console with HTTP status and round-trip time
+func LogCall(method, steamID, username, status, statusColor string, roundTripTime int64) {
 	delay := strconv.FormatInt(roundTripTime, 10)
 	fmt.Printf("%s [%s] %s %s%s%s %vms\n", method, steamID, username, statusColor, status, "\033[0m", delay)
 }
@@ -73,10 +76,12 @@ func logCall(method, steamID, username, status, statusColor string, roundTripTim
 // GetFriends Returns the list of friends of a user in friendsStruct format
 func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+
+	// Check to see if the steamID is in the valid format now to save time
 	match, _ := regexp.MatchString("([0-9]){17}", steamID)
 	if !match {
 		endTime := time.Now().UnixNano() / int64(time.Millisecond)
-		go logCall("GET", steamID, "\033[31mInvalid SteamID\033[0m", "400", "\033[31m", endTime-startTime)
+		go LogCall("GET", steamID, "\033[31mInvalid SteamID\033[0m", "400", "\033[31m", endTime-startTime)
 		var temp FriendsStruct
 		waitG.Done()
 		return temp, errors.New("Invalid steamID")
@@ -95,10 +100,11 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	var friendsObj FriendsStruct
 	json.Unmarshal(body, &friendsObj)
 
+	// If the HTTP response has error messages in it handle them accordingly
 	match, _ = regexp.MatchString("(Internal Server Error)+", string(body))
 	if match {
 		endTime := time.Now().UnixNano() / int64(time.Millisecond)
-		go logCall("GET", steamID, friendsObj.Username, "400", "\033[31m", endTime-startTime)
+		go LogCall("GET", steamID, friendsObj.Username, "400", "\033[31m", endTime-startTime)
 		time.Sleep(1900 * time.Millisecond)
 		var temp FriendsStruct
 		waitG.Done()
@@ -108,7 +114,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	match, _ = regexp.MatchString("(Forbidden)+", string(body))
 	if match {
 		endTime := time.Now().UnixNano() / int64(time.Millisecond)
-		go logCall("GET", steamID, friendsObj.Username, "403", "\033[31m", endTime-startTime)
+		go LogCall("GET", steamID, friendsObj.Username, "403", "\033[31m", endTime-startTime)
 		time.Sleep(1900 * time.Millisecond)
 		var temp FriendsStruct
 		waitG.Done()
@@ -116,12 +122,14 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	}
 
 	// this part converts the steamIDs we
-	// have into usernames that are readable
-
+	// have into usernames that are then added
+	// onto the friendsStruct
 	steamIDsList := ""
 	friendsListLen := len(friendsObj.FriendsList.Friends)
 
-	callCount, remainder := divmod(friendsListLen, 100)
+	// Only 100 steamIDs can be given per call, hence we must
+	// divide the friends list into lists of 100 or less lists
+	callCount, remainder := Divmod(friendsListLen, 100)
 
 	// less than 100 friends, only 1 call is needed
 	if callCount < 1 {
@@ -153,7 +161,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 		}
 
 	} else {
-		// divide into calls of 100 friends and usernames to the friends struct
+		// More than 100 friends, subsequent calls are needed
 
 		for i := 0; i <= callCount; i++ {
 			//each batch of 100
@@ -190,6 +198,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 			if i < callCount {
 				for k := 0; k < 100; k++ {
+					// find the entry in the friendsObj struct and set the username field
 					friendsObj.FriendsList.Friends[k+(i*100)].Username = userStatsObj.Response.Players[k].Personaname
 				}
 			} else {
@@ -224,7 +233,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 	// log the request along the round trip delay
 	endTime := time.Now().UnixNano() / int64(time.Millisecond)
-	go logCall("GET", steamID, friendsObj.Username, "200", "\033[32m", endTime-startTime)
+	go LogCall("GET", steamID, friendsObj.Username, "200", "\033[32m", endTime-startTime)
 	waitG.Done()
 	return friendsObj, nil
 }
@@ -247,16 +256,7 @@ func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
 	_ = ioutil.WriteFile(fileLoc, jsonObj, 0644)
 }
 
-// PrintDetails Returns a nicely formatted array of each friend's name
-// and the time since the use first friended them
-func PrintDetails(inputObj FriendsStruct) {
-	for ind, val := range inputObj.FriendsList.Friends {
-		// fmt.Printf("[%d] %v\n", ind+1, time.Unix(val.FriendSince, 0))
-		fmt.Printf("[%d] %v\n", ind+1, val.Steamid)
-	}
-}
-
-// GetAPIKeys Retrieve the API keys to make requests with
+// GetAPIKeys Retrieve the API key(s) to make requests with
 func GetAPIKeys() ([]string, error) {
 	file, err := os.Open("APIKEYS.txt")
 	if err != nil {
@@ -278,14 +278,15 @@ func GetAPIKeys() ([]string, error) {
 	if len(apiKeys) > 0 {
 		return apiKeys, nil
 	}
-
+	// APIKeys.txt does exist but it is empty
 	return nil, errors.New("No API key(s)")
 }
 
 func main() {
-	if len(os.Args) < 3 {
-		log.Fatal("Invalid arguments entered")
-	}
+
+	level := flag.Int("level", 2, "Level of friends you want to crawl. 1 is your friends, 2 is mutual friends etc")
+
+	flag.Parse()
 
 	apiKeys, err := GetAPIKeys()
 	if err != nil {
@@ -294,44 +295,35 @@ func main() {
 
 	numAPIKeys := len(apiKeys)
 
-	level, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		log.Fatal("Invalid level entered")
-	}
-
+	// Create the userData folder to hold logs if it doesn't exist
 	if _, err := os.Stat("userData/"); os.IsNotExist(err) {
-		// path/to/whatever does not exist
 		os.Mkdir("userData/", 0755)
 	}
 
-	if len(os.Args) > 0 {
-
+	if len(os.Args) > 1 {
 		var waitG sync.WaitGroup
 		waitG.Add(1)
-		friendsObj, err := GetFriends(os.Args[1], apiKeys[0], &waitG)
+
+		friendsObj, err := GetFriends(os.Args[len(os.Args)-1], apiKeys[0], &waitG)
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		numFriends := len(friendsObj.FriendsList.Friends)
-		if level > 1 {
-			fmt.Printf("You have %d friends, this should take %d seconds to scrape at %d level deep (friends of friends)\n", numFriends, numFriends*2, level)
+
+		if *level > 1 {
+			fmt.Printf("Friends: %d\nLevels: %d\n", numFriends, *level)
 			for i, friend := range friendsObj.FriendsList.Friends {
-				// _, err := GetFriends(friend.Steamid, apiKeys[i%(numAPIKeys)])
 				waitG.Add(1)
 				go GetFriends(friend.Steamid, apiKeys[i%(numAPIKeys)], &waitG)
+				// Sleep a bit to not annoy valve's servers
 				time.Sleep(100 * time.Millisecond)
-
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
-				// fmt.Println("Using key " + apiKeys[i])
 			}
-
 			waitG.Wait()
 		}
 
 	} else {
 		fmt.Println("Incorrect arguments")
-		fmt.Println("./main steamID")
+		fmt.Println("./main [arguments] steamID")
 	}
 }
