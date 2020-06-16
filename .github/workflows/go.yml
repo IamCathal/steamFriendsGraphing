@@ -39,4 +39,4 @@ jobs:
     - name: Test
       run: go test -v ./src
       env:
-        APIKey: ${{ secrets.APIKEY }}
+        APIKEY: ${{ secrets.APIKEY }}
