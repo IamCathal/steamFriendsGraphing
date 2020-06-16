@@ -19,13 +19,15 @@ func TestGetFriends(t *testing.T) {
 		os.Mkdir("userData/", 0755)
 	}
 
+	os.Setenv("testing", "")
+
 	var tests = []testInput{
-		{"76561198282036055", os.Getenv("APIKey"), false},
-		{"7656119807862962", os.Getenv("APIKey"), true},
-		{"76561198271948679", os.Getenv("APIKey"), false},
-		{"7656119796028793", os.Getenv("APIKey"), true},
-		{"76561198144084014", os.Getenv("APIKey"), false},
-		{"gibberish", os.Getenv("APIKey"), true},
+		{"76561198282036055", os.Getenv("APIKEY"), false},
+		{"7656119807862962", os.Getenv("APIKEY"), true},
+		{"76561198271948679", os.Getenv("APIKEY"), false},
+		{"7656119796028793", os.Getenv("APIKEY"), true},
+		{"76561198144084014", os.Getenv("APIKEY"), false},
+		{"gibberish", os.Getenv("APIKEY"), true},
 	}
 
 	var waitG sync.WaitGroup
@@ -41,6 +43,7 @@ func TestGetFriends(t *testing.T) {
 			}
 		} else if testCase.shouldFail {
 			t.Error("Caught misbehaving testcase",
+				"APIKEY", os.Getenv("APIKEY"),
 				"SteamID:", testCase.steamID,
 			)
 		}

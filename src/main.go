@@ -7,16 +7,15 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"sync"
 	"time"
 )
 
-// IndivFriend holds indivial friend data
+// IndivFriend holds profile information for
+// a single individual
 type IndivFriend struct {
 	Steamid string `json:"steamid"`
 	// Steamid is the default steamid64 value for a user
@@ -25,7 +24,7 @@ type IndivFriend struct {
 	FriendSince int64 `json:"friend_since,omitempty"`
 	// FriendSince, unix timestamp of when the friend request was accepted
 	Username string `json:"username"`
-	// Username is steam username
+	// Username is steam public username
 }
 
 // FriendsStruct messy but it holds the array of all friends
@@ -37,7 +36,7 @@ type FriendsStruct struct {
 }
 
 // UserStatsStruct is the JSON response of the
-// user stats lookup to get usernames from steamIDs
+// userstats lookup to get usernames from steamIDs
 type UserStatsStruct struct {
 	Response struct {
 		Players []struct {
@@ -60,20 +59,7 @@ type UserStatsStruct struct {
 	} `json:"response"`
 }
 
-// Divmod divices a friendslist into stacks of 100 and the remainder
-func Divmod(numerator, denominator int) (quotient, remainder int) {
-	quotient = numerator / denominator
-	remainder = numerator % denominator
-	return
-}
-
-// LogCall logs a HTTP call to console with HTTP status and round-trip time
-func LogCall(method, steamID, username, status, statusColor string, roundTripTime int64) {
-	delay := strconv.FormatInt(roundTripTime, 10)
-	fmt.Printf("%s [%s] %s %s%s%s %vms\n", method, steamID, username, statusColor, status, "\033[0m", delay)
-}
-
-// GetFriends Returns the list of friends of a user in friendsStruct format
+// GetFriends Returns the list of friends for a given user
 func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 
@@ -89,13 +75,9 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", apiKey, steamID)
 	res, err := http.Get(targetURL)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckErr(err)
 	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckErr(err)
 
 	var friendsObj FriendsStruct
 	json.Unmarshal(body, &friendsObj)
@@ -114,21 +96,21 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	match, _ = regexp.MatchString("(Forbidden)+", string(body))
 	if match {
 		endTime := time.Now().UnixNano() / int64(time.Millisecond)
-		go LogCall("GET", steamID, friendsObj.Username, "403", "\033[31m", endTime-startTime)
+		go LogCall("GET", steamID, "Invalid URL", "403", "\033[31m", endTime-startTime)
 		time.Sleep(1900 * time.Millisecond)
 		var temp FriendsStruct
 		waitG.Done()
-		return temp, errors.New("Invalid API key -" + apiKey)
+		fmt.Println(apiKey)
+		return temp, fmt.Errorf("invalid api key: %s", apiKey)
 	}
 
-	// this part converts the steamIDs we
-	// have into usernames that are then added
-	// onto the friendsStruct
+	// this part converts the steamIDs into username
+	// that are then added onto the friendsStruct
 	steamIDsList := ""
 	friendsListLen := len(friendsObj.FriendsList.Friends)
 
 	// Only 100 steamIDs can be given per call, hence we must
-	// divide the friends list into lists of 100 or less lists
+	// divide the friends list into lists of 100 or less
 	callCount, remainder := Divmod(friendsListLen, 100)
 
 	// less than 100 friends, only 1 call is needed
@@ -145,13 +127,9 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 		targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamIDsList)
 		res, err = http.Get(targetURL)
-		if err != nil {
-			log.Fatal(err)
-		}
+		CheckErr(err)
 		body, err = ioutil.ReadAll(res.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
+		CheckErr(err)
 
 		var userStatsObj UserStatsStruct
 		json.Unmarshal(body, &userStatsObj)
@@ -178,20 +156,14 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 				// a batch of the remainder (less than 100)
 				for k := 0; k < remainder; k++ {
 					steamIDsList += friendsObj.FriendsList.Friends[k+(i*100)].Steamid + ","
-					// fmt.Println(k + (i * 100))
 				}
 			}
 
 			targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamIDsList)
-			// fmt.Println(targetURL)
 			res, err = http.Get(targetURL)
-			if err != nil {
-				log.Fatal(err)
-			}
+			CheckErr(err)
 			body, err = ioutil.ReadAll(res.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
+			CheckErr(err)
 
 			var userStatsObj UserStatsStruct
 			json.Unmarshal(body, &userStatsObj)
@@ -211,16 +183,12 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 	}
 
-	// get the target person's username
+	// get the target person's username from their steamID
 	targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamID)
 	res, err = http.Get(targetURL)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckErr(err)
 	body, err = ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckErr(err)
 	var userStatsObj UserStatsStruct
 	json.Unmarshal(body, &userStatsObj)
 
@@ -243,15 +211,11 @@ func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
 
 	fileLoc := fmt.Sprintf("userData/%s.json", steamID)
 	file, err := os.Create(fileLoc)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckErr(err)
 	defer file.Close()
 
 	jsonObj, err := json.Marshal(friends)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckErr(err)
 
 	_ = ioutil.WriteFile(fileLoc, jsonObj, 0644)
 }
@@ -260,7 +224,7 @@ func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
 func GetAPIKeys() ([]string, error) {
 	file, err := os.Open("APIKEYS.txt")
 	if err != nil {
-		return nil, errors.New("No APIKEYS.txt file found")
+		CheckErr(errors.New("No APIKEYS.txt file found"))
 	}
 	defer file.Close()
 
@@ -289,9 +253,7 @@ func main() {
 	flag.Parse()
 
 	apiKeys, err := GetAPIKeys()
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckErr(err)
 
 	numAPIKeys := len(apiKeys)
 
@@ -303,11 +265,9 @@ func main() {
 	if len(os.Args) > 1 {
 		var waitG sync.WaitGroup
 		waitG.Add(1)
-
+		// Last argument should be the steamID
 		friendsObj, err := GetFriends(os.Args[len(os.Args)-1], apiKeys[0], &waitG)
-		if err != nil {
-			log.Fatal(err)
-		}
+		CheckErr(err)
 
 		numFriends := len(friendsObj.FriendsList.Friends)
 
