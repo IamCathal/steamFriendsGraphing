@@ -34,7 +34,7 @@ func TestGetFriends(t *testing.T) {
 
 	for _, testCase := range tests {
 		waitG.Add(1)
-		_, err := GetFriends(testCase.steamID, os.Getenv("APIKey"), &waitG)
+		_, err := GetFriends(testCase.steamID, os.Getenv("APIKEY"), &waitG)
 		if err != nil {
 			if !testCase.shouldFail {
 				t.Error("Error:", err,
