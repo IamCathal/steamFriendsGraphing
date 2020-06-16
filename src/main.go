@@ -209,7 +209,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 // WriteToFile writes the friends to a file for later processing
 func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
 
-	fileLoc := fmt.Sprintf("userData/%s.json", steamID)
+	fileLoc := fmt.Sprintf("../userData/%s.json", steamID)
 	file, err := os.Create(fileLoc)
 	CheckErr(err)
 	defer file.Close()
@@ -258,8 +258,8 @@ func main() {
 	numAPIKeys := len(apiKeys)
 
 	// Create the userData folder to hold logs if it doesn't exist
-	if _, err := os.Stat("userData/"); os.IsNotExist(err) {
-		os.Mkdir("userData/", 0755)
+	if _, err := os.Stat("../userData/"); os.IsNotExist(err) {
+		os.Mkdir("../userData/", 0755)
 	}
 
 	if len(os.Args) > 1 {

@@ -14,9 +14,9 @@ type testInput struct {
 
 func TestGetFriends(t *testing.T) {
 
-	if _, err := os.Stat("userData/"); os.IsNotExist(err) {
+	if _, err := os.Stat("../userData/"); os.IsNotExist(err) {
 		// path/to/whatever does not exist
-		os.Mkdir("userData/", 0755)
+		os.Mkdir("../userData/", 0755)
 	}
 
 	os.Setenv("testing", "")
