@@ -31,7 +31,7 @@ jobs:
         fi
 
     - name: Format 
-      run: go fmt ./src/main.go src/util.go
+      run: go fmt ./src/main.go ./src/util.go
         
     - name: Build
       run: go build -o main -v ./src
