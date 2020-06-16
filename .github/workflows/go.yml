@@ -31,9 +31,9 @@ jobs:
         fi
 
     - name: Build
-      run: go build -v .
+      run: go build -v ./src/
 
     - name: Test
-      run: go test -v .
+      run: go test -v ./src/
       env:
         APIKey: ${{ secrets.APIKEY }}
