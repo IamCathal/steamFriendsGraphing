@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+var (
+	green = "\033[32m"
+	red   = "\033[31m"
+)
+
 // Divmod divides a friendslist into stacks of 100 and the remainder
 func Divmod(numerator, denominator int) (quotient, remainder int) {
 	quotient = numerator / denominator

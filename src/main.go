@@ -35,6 +35,8 @@ type FriendsStruct struct {
 	} `json:"friendslist"`
 }
 
+// Player holds all account information for a given player. This is the
+// response from the getPlayerSummaries endpoint
 type Player struct {
 	Steamid                  string `json:"steamid"`
 	Communityvisibilitystate int    `json:"communityvisibilitystate"`
@@ -70,7 +72,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	// Check to see if the steamID is in the valid format now to save time
 	match, _ := regexp.MatchString("([0-9]){17}", steamID)
 	if !match {
-		go LogCall("GET", steamID, "\033[31mInvalid SteamID\033[0m", "400", "\033[31m", startTime)
+		go LogCall("GET", steamID, "\033[31mInvalid SteamID\033[0m", "400", red, startTime)
 		var temp FriendsStruct
 		waitG.Done()
 		return temp, errors.New("Invalid steamID")
@@ -80,6 +82,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	res, err := http.Get(targetURL)
 	CheckErr(err)
 	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
 	CheckErr(err)
 
 	var friendsObj FriendsStruct
@@ -88,7 +91,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	// If the HTTP response has error messages in it handle them accordingly
 	match, _ = regexp.MatchString("(Internal Server Error)+", string(body))
 	if match {
-		go LogCall("GET", steamID, friendsObj.Username, "400", "\033[31m", startTime)
+		go LogCall("GET", steamID, friendsObj.Username, "400", red, startTime)
 		time.Sleep(1900 * time.Millisecond)
 		var temp FriendsStruct
 		waitG.Done()
@@ -97,7 +100,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 	match, _ = regexp.MatchString("(Forbidden)+", string(body))
 	if match {
-		go LogCall("GET", steamID, "Invalid URL", "403", "\033[31m", startTime)
+		go LogCall("GET", steamID, "Invalid URL", "403", red, startTime)
 		time.Sleep(1900 * time.Millisecond)
 		var temp FriendsStruct
 		waitG.Done()
@@ -131,13 +134,14 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 		res, err = http.Get(targetURL)
 		CheckErr(err)
 		body, err = ioutil.ReadAll(res.Body)
+		defer res.Body.Close()
 		CheckErr(err)
 
 		var userStatsObj UserStatsStruct
 		json.Unmarshal(body, &userStatsObj)
 
 		// Order of received friends is random,
-		// must assign them using map
+		// must assign them using map[steamID]username
 		friendsMap := make(map[string]string)
 		for _, user := range userStatsObj.Response.Players {
 			friendsMap[user.Steamid] = user.Personaname
@@ -145,12 +149,10 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 		for i := 0; i < len(friendsObj.FriendsList.Friends); i++ {
 			friendsObj.FriendsList.Friends[i].Username = friendsMap[friendsObj.FriendsList.Friends[i].Steamid]
-			// fmt.Printf("Assigning %s to %s\n", friendsObj.FriendsList.Friends[i].Username, friendsMap[friendsObj.FriendsList.Friends[i].Steamid])
 		}
 
 	} else {
 		// More than 100 friends, subsequent calls are needed
-
 		for i := 0; i <= callCount; i++ {
 			//each batch of 100
 
@@ -179,7 +181,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 			json.Unmarshal(body, &userStatsObj)
 
 			// Order of received friends is random,
-			// must assign them using map
+			// must assign them using map[steamID]username
 			friendsMap := make(map[string]string)
 			for _, user := range userStatsObj.Response.Players {
 				friendsMap[user.Steamid] = user.Personaname
@@ -188,12 +190,10 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 			if i < callCount {
 				for k := 0; k < 100; k++ {
 					// find the entry in the friendsObj struct and set the username field
-					// friendsObj.FriendsList.Friends[k+(i*100)].Username = userStatsObj.Response.Players[k].Personaname
 					friendsObj.FriendsList.Friends[k+(i*100)].Username = friendsMap[friendsObj.FriendsList.Friends[k+(i*100)].Steamid]
 				}
 			} else {
 				for k := 0; k < remainder; k++ {
-					// friendsObj.FriendsList.Friends[k+(i*100)].Username = userStatsObj.Response.Players[k].Personaname
 					friendsObj.FriendsList.Friends[k+(i*100)].Username = friendsMap[friendsObj.FriendsList.Friends[k].Steamid]
 				}
 			}
@@ -208,6 +208,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	res, err = http.Get(targetURL)
 	CheckErr(err)
 	body, err = ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
 	CheckErr(err)
 	var userStatsObj UserStatsStruct
 	json.Unmarshal(body, &userStatsObj)
@@ -220,7 +221,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	}
 
 	// log the request along the round trip delay
-	go LogCall("GET", steamID, friendsObj.Username, "200", "\033[32m", startTime)
+	go LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
 	waitG.Done()
 	return friendsObj, nil
 }
