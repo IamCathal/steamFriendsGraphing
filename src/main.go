@@ -35,26 +35,30 @@ type FriendsStruct struct {
 	} `json:"friendslist"`
 }
 
+type Player struct {
+	Steamid                  string `json:"steamid"`
+	Communityvisibilitystate int    `json:"communityvisibilitystate"`
+	Profilestate             int    `json:"profilestate"`
+	Personaname              string `json:"personaname"`
+	Profileurl               string `json:"profileurl"`
+	Avatar                   string `json:"avatar"`
+	Avatarmedium             string `json:"avatarmedium"`
+	Avatarfull               string `json:"avatarfull"`
+	Personastate             int    `json:"personastate"`
+	Realname                 string `json:"realname,omitempty"`
+	Primaryclanid            string `json:"primaryclanid,omitempty"`
+	Timecreated              int    `json:"timecreated,omitempty"`
+	Personastateflags        int    `json:"personastateflags,omitempty"`
+	Loccountrycode           string `json:"loccountrycode,omitempty"`
+	Commentpermission        int    `json:"commentpermission,omitempty"`
+}
+
 // UserStatsStruct is the JSON response of the
 // userstats lookup to get usernames from steamIDs
 type UserStatsStruct struct {
 	Response struct {
 		Players []struct {
-			Steamid                  string `json:"steamid"`
-			Communityvisibilitystate int    `json:"communityvisibilitystate"`
-			Profilestate             int    `json:"profilestate"`
-			Personaname              string `json:"personaname"`
-			Profileurl               string `json:"profileurl"`
-			Avatar                   string `json:"avatar"`
-			Avatarmedium             string `json:"avatarmedium"`
-			Avatarfull               string `json:"avatarfull"`
-			Personastate             int    `json:"personastate"`
-			Realname                 string `json:"realname,omitempty"`
-			Primaryclanid            string `json:"primaryclanid,omitempty"`
-			Timecreated              int    `json:"timecreated,omitempty"`
-			Personastateflags        int    `json:"personastateflags,omitempty"`
-			Loccountrycode           string `json:"loccountrycode,omitempty"`
-			Commentpermission        int    `json:"commentpermission,omitempty"`
+			Player
 		} `json:"players"`
 	} `json:"response"`
 }
@@ -66,8 +70,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	// Check to see if the steamID is in the valid format now to save time
 	match, _ := regexp.MatchString("([0-9]){17}", steamID)
 	if !match {
-		endTime := time.Now().UnixNano() / int64(time.Millisecond)
-		go LogCall("GET", steamID, "\033[31mInvalid SteamID\033[0m", "400", "\033[31m", endTime-startTime)
+		go LogCall("GET", steamID, "\033[31mInvalid SteamID\033[0m", "400", "\033[31m", startTime)
 		var temp FriendsStruct
 		waitG.Done()
 		return temp, errors.New("Invalid steamID")
@@ -85,8 +88,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	// If the HTTP response has error messages in it handle them accordingly
 	match, _ = regexp.MatchString("(Internal Server Error)+", string(body))
 	if match {
-		endTime := time.Now().UnixNano() / int64(time.Millisecond)
-		go LogCall("GET", steamID, friendsObj.Username, "400", "\033[31m", endTime-startTime)
+		go LogCall("GET", steamID, friendsObj.Username, "400", "\033[31m", startTime)
 		time.Sleep(1900 * time.Millisecond)
 		var temp FriendsStruct
 		waitG.Done()
@@ -95,12 +97,12 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 	match, _ = regexp.MatchString("(Forbidden)+", string(body))
 	if match {
-		endTime := time.Now().UnixNano() / int64(time.Millisecond)
-		go LogCall("GET", steamID, "Invalid URL", "403", "\033[31m", endTime-startTime)
+		go LogCall("GET", steamID, "Invalid URL", "403", "\033[31m", startTime)
 		time.Sleep(1900 * time.Millisecond)
 		var temp FriendsStruct
 		waitG.Done()
-		fmt.Println(apiKey)
+		fmt.Println("Invalid API key: " + apiKey)
+		GetFriends(steamID, os.Getenv("APIKEY"), waitG)
 		return temp, fmt.Errorf("invalid api key: %s", apiKey)
 	}
 
@@ -134,8 +136,16 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 		var userStatsObj UserStatsStruct
 		json.Unmarshal(body, &userStatsObj)
 
-		for i, user := range userStatsObj.Response.Players {
-			friendsObj.FriendsList.Friends[i].Username = user.Personaname
+		// Order of received friends is random,
+		// must assign them using map
+		friendsMap := make(map[string]string)
+		for _, user := range userStatsObj.Response.Players {
+			friendsMap[user.Steamid] = user.Personaname
+		}
+
+		for i := 0; i < len(friendsObj.FriendsList.Friends); i++ {
+			friendsObj.FriendsList.Friends[i].Username = friendsMap[friendsObj.FriendsList.Friends[i].Steamid]
+			// fmt.Printf("Assigning %s to %s\n", friendsObj.FriendsList.Friends[i].Username, friendsMap[friendsObj.FriendsList.Friends[i].Steamid])
 		}
 
 	} else {
@@ -168,14 +178,23 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 			var userStatsObj UserStatsStruct
 			json.Unmarshal(body, &userStatsObj)
 
+			// Order of received friends is random,
+			// must assign them using map
+			friendsMap := make(map[string]string)
+			for _, user := range userStatsObj.Response.Players {
+				friendsMap[user.Steamid] = user.Personaname
+			}
+
 			if i < callCount {
 				for k := 0; k < 100; k++ {
 					// find the entry in the friendsObj struct and set the username field
-					friendsObj.FriendsList.Friends[k+(i*100)].Username = userStatsObj.Response.Players[k].Personaname
+					// friendsObj.FriendsList.Friends[k+(i*100)].Username = userStatsObj.Response.Players[k].Personaname
+					friendsObj.FriendsList.Friends[k+(i*100)].Username = friendsMap[friendsObj.FriendsList.Friends[k+(i*100)].Steamid]
 				}
 			} else {
 				for k := 0; k < remainder; k++ {
-					friendsObj.FriendsList.Friends[k+(i*100)].Username = userStatsObj.Response.Players[k].Personaname
+					// friendsObj.FriendsList.Friends[k+(i*100)].Username = userStatsObj.Response.Players[k].Personaname
+					friendsObj.FriendsList.Friends[k+(i*100)].Username = friendsMap[friendsObj.FriendsList.Friends[k].Steamid]
 				}
 			}
 
@@ -183,8 +202,9 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 	}
 
-	// get the target person's username from their steamID
-	targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamID)
+	// Get the target username from the ID
+	targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
+		apiKey, steamID)
 	res, err = http.Get(targetURL)
 	CheckErr(err)
 	body, err = ioutil.ReadAll(res.Body)
@@ -200,8 +220,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	}
 
 	// log the request along the round trip delay
-	endTime := time.Now().UnixNano() / int64(time.Millisecond)
-	go LogCall("GET", steamID, friendsObj.Username, "200", "\033[32m", endTime-startTime)
+	go LogCall("GET", steamID, friendsObj.Username, "200", "\033[32m", startTime)
 	waitG.Done()
 	return friendsObj, nil
 }
