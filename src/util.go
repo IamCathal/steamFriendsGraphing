@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -19,6 +21,13 @@ func Divmod(numerator, denominator int) (quotient, remainder int) {
 	return
 }
 
+func CreateUserDataFolder() {
+	// Create the userData folder to hold logs if it doesn't exist
+	if _, err := os.Stat("../userData/"); os.IsNotExist(err) {
+		os.Mkdir("../userData/", 0755)
+	}
+}
+
 // LogCall logs a to the API with various stats on the request
 func LogCall(method, steamID, username, status, statusColor string, startTime int64) {
 	endTime := time.Now().UnixNano() / int64(time.Millisecond)
@@ -33,4 +42,28 @@ func CheckErr(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func IsValidFormatSteamID(steamID string) bool {
+	match, _ := regexp.MatchString("([0-9]){17}", steamID)
+	if !match {
+		return false
+	}
+	return true
+}
+
+func IsValidSteamID(body string) bool {
+	match, _ := regexp.MatchString("(Internal Server Error)+", body)
+	if match {
+		return false
+	}
+	return true
+}
+
+func IsValidAPIKey(body string) bool {
+	match, _ := regexp.MatchString("(Forbidden)+", body)
+	if match {
+		return false
+	}
+	return true
 }

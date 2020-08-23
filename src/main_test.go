@@ -21,6 +21,10 @@ func TestGetFriends(t *testing.T) {
 
 	os.Setenv("testing", "")
 
+	if os.Getenv("APIKEY") == "" {
+		t.Error("No APIKEY set")
+	}
+
 	var tests = []testInput{
 		{"76561198282036055", os.Getenv("APIKEY"), false},
 		{"7656119807862962", os.Getenv("APIKEY"), true},
