@@ -115,6 +115,8 @@ func CheckErr(err error) {
 	}
 }
 
+// IsValidFormatSteamID does a simple regex check to see if the
+// steamID is in the valid format before calling the API
 func IsValidFormatSteamID(steamID string) bool {
 	match, _ := regexp.MatchString("([0-9]){17}", steamID)
 	if !match {
@@ -123,6 +125,8 @@ func IsValidFormatSteamID(steamID string) bool {
 	return true
 }
 
+// IsValidSteamID checks if the steamID was valid by checking
+// if the response had an error
 func IsValidSteamID(body string) bool {
 	match, _ := regexp.MatchString("(Internal Server Error)+", body)
 	if match {
@@ -131,6 +135,8 @@ func IsValidSteamID(body string) bool {
 	return true
 }
 
+// IsValidAPIKey checks if the API key is invalid based off an API call's
+// returned content
 func IsValidAPIKey(body string) bool {
 	match, _ := regexp.MatchString("(Forbidden)+", body)
 	if match {
