@@ -26,8 +26,20 @@ func TestGetFriends(t *testing.T) {
 		t.Error("No APIKEY set")
 	}
 
-	apiKeys, err := GetAPIKeys()
-	CheckErr(err)
+	apiKeys := make([]string, 0)
+
+	// When being test on the GitHub actions enviroment
+	// it should take keys from from the environment variables
+	// rather than the non existent APIKEYS.txt file
+	if os.Getenv("GITHUBACTIONS") != "" {
+		apiKeys = append(apiKeys, os.Getenv("APIKEY"))
+		apiKeys = append(apiKeys, os.Getenv("APIKEY1"))
+	} else {
+		apiKeySlice, err := GetAPIKeys()
+		CheckErr(err)
+
+		apiKeys = apiKeySlice
+	}
 
 	var tests = []testInput{
 		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},

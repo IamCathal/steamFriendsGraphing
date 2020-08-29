@@ -40,3 +40,6 @@ jobs:
       run: go test -v ./src
       env:
         APIKEY: ${{ secrets.APIKEY }}
+        APIKEY1: ${{ secrets.APIKEY1 }}
+        GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
+
