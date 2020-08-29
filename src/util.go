@@ -21,11 +21,17 @@ func Divmod(numerator, denominator int) (quotient, remainder int) {
 	return
 }
 
-func CreateUserDataFolder() {
+func CreateUserDataFolder() error {
 	// Create the userData folder to hold logs if it doesn't exist
-	if _, err := os.Stat("../userData/"); os.IsNotExist(err) {
+	_, err := os.Stat("../userData/")
+	if os.IsNotExist(err) {
 		os.Mkdir("../userData/", 0755)
 	}
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // LogCall logs a to the API with various stats on the request

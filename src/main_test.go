@@ -73,3 +73,10 @@ func TestGetFriends(t *testing.T) {
 	}
 
 }
+
+func TestCreateDataFolder(t *testing.T) {
+	err := CreateUserDataFolder()
+	if err != nil {
+		t.Error("error creating user data folder")
+	}
+}
