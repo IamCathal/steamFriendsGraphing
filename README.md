@@ -9,6 +9,8 @@
   </a>
 </p>
 
+![example workflow name](https://github.com/IamCathal/steamFriendsGraphing/workflows/Go/badge.svg) ![coverage badge](coverage_badge.png)
+
 ## What's the goal of this project? 
 The goal of this project is to determine the degrees of seperation between any two users on [Steam](https://store.steampowered.com/)
 
