@@ -34,7 +34,7 @@ jobs:
       run: go fmt ./src/main.go ./src/util.go
         
     - name: Build
-      run: go build -o main -v ./src
+      run: go build -o ./src/main -v ./src
 
     - name: Test
       run: go test -v ./src

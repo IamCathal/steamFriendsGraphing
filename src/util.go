@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -19,6 +22,67 @@ func Divmod(numerator, denominator int) (quotient, remainder int) {
 	quotient = numerator / denominator
 	remainder = numerator % denominator
 	return
+}
+
+func GetUsername(apiKey, steamID string) (string, error) {
+
+	if valid := IsValidFormatSteamID(steamID); !valid {
+		return "", fmt.Errorf("invalid steamID format")
+	}
+
+	// Get the target username from the ID
+	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
+		apiKey, steamID)
+	res, err := http.Get(targetURL)
+	if err != nil {
+		return "", err
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return "", err
+	}
+
+	var userStatsObj UserStatsStruct
+	json.Unmarshal(body, &userStatsObj)
+
+	if len(userStatsObj.Response.Players) == 0 {
+		return "", fmt.Errorf("invalid steamID %s given", steamID)
+	}
+
+	return userStatsObj.Response.Players[0].Personaname, nil
+}
+
+func PrintUserDetails(apiKey, steamID string) error {
+
+	if valid := IsValidFormatSteamID(steamID); !valid {
+	}
+
+	// Get the target username from the ID
+	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
+		apiKey, steamID)
+	res, err := http.Get(targetURL)
+	if err != nil {
+		return err
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return err
+	}
+
+	var userStatsObj UserStatsStruct
+	json.Unmarshal(body, &userStatsObj)
+
+	if len(userStatsObj.Response.Players) == 0 {
+		return fmt.Errorf("invalid steamID %s given", steamID)
+	}
+
+	fmt.Printf("SteamID: %s\n", userStatsObj.Response.Players[0].Steamid)
+	fmt.Printf("Username: %s\n", userStatsObj.Response.Players[0].Personaname)
+	fmt.Printf("Profile URL: %s\n", userStatsObj.Response.Players[0].Profileurl)
+	fmt.Printf("Time Created: %s\n", time.Unix(int64(userStatsObj.Response.Players[0].Timecreated), 0))
+	return nil
 }
 
 func CreateUserDataFolder() error {

@@ -72,7 +72,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 	// Check to see if the steamID is in the valid format now to save time
 	if valid := IsValidFormatSteamID(steamID); !valid {
-		go LogCall("GET", steamID, "\033[31mInvalid SteamID\033[0m", "400", red, startTime)
+		go LogCall("GET", steamID, "Invalid SteamID", "400", red, startTime)
 		var temp FriendsStruct
 		return temp, errors.New("Invalid steamID")
 	}
@@ -192,19 +192,9 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 	}
 
-	// Get the target username from the ID
-	targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
-		apiKey, steamID)
-	res, err = http.Get(targetURL)
+	username, err := GetUsername(apiKey, steamID)
 	CheckErr(err)
-	body, err = ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	CheckErr(err)
-
-	var userStatsObj UserStatsStruct
-	json.Unmarshal(body, &userStatsObj)
-
-	friendsObj.Username = userStatsObj.Response.Players[0].Personaname
+	friendsObj.Username = username
 
 	// if testing env var is set, don't bother writing to file
 	if os.Getenv("testing") == "" {
@@ -260,6 +250,7 @@ func GetAPIKeys() ([]string, error) {
 func main() {
 
 	level := flag.Int("level", 2, "Level of friends you want to crawl. 1 is your friends, 2 is mutual friends etc")
+	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
 	flag.Parse()
 
 	apiKeys, err := GetAPIKeys()
@@ -279,7 +270,12 @@ func main() {
 		numFriends := len(friendsObj.FriendsList.Friends)
 
 		if *level > 1 {
-			fmt.Printf("Friends: %d\nLevels: %d\n", numFriends, *level)
+
+			fmt.Printf("Friends: %d\n", numFriends)
+			if *statMode {
+				PrintUserDetails(apiKeys[0], os.Args[len(os.Args)-1])
+				return
+			}
 
 			for i, friend := range friendsObj.FriendsList.Friends {
 				waitG.Add(1)
