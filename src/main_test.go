@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/rand"
 	"os"
 	"sync"
 	"testing"
@@ -25,20 +26,25 @@ func TestGetFriends(t *testing.T) {
 		t.Error("No APIKEY set")
 	}
 
+	apiKeys, err := GetAPIKeys()
+	CheckErr(err)
+
 	var tests = []testInput{
-		{"76561198282036055", os.Getenv("APIKEY"), false},
-		{"7656119807862962", os.Getenv("APIKEY"), true},
-		{"76561198271948679", os.Getenv("APIKEY"), false},
-		{"7656119796028793", os.Getenv("APIKEY"), true},
-		{"76561198144084014", os.Getenv("APIKEY"), false},
-		{"gibberish", os.Getenv("APIKEY"), true},
+		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
+		{"76561198282036055", "invalid key", true},
+		{"7656119807862962", apiKeys[rand.Intn(len(apiKeys))], true},
+		{"76561198271948679", apiKeys[rand.Intn(len(apiKeys))], false},
+		{"7656119796028793", apiKeys[rand.Intn(len(apiKeys))], true},
+		{"76561198144084014", apiKeys[rand.Intn(len(apiKeys))], false},
+		{"11111111111111111", apiKeys[rand.Intn(len(apiKeys))], true},
+		{"gibberish", apiKeys[rand.Intn(len(apiKeys))], true},
 	}
 
 	var waitG sync.WaitGroup
 
 	for _, testCase := range tests {
 		waitG.Add(1)
-		_, err := GetFriends(testCase.steamID, os.Getenv("APIKEY"), &waitG)
+		_, err := GetFriends(testCase.steamID, testCase.apiKey, &waitG)
 		if err != nil {
 			if !testCase.shouldFail {
 				t.Error("Error:", err,

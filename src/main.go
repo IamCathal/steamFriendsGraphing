@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -76,7 +77,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 		return temp, errors.New("Invalid steamID")
 	}
 
-	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", apiKey, steamID)
+	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", url.QueryEscape(apiKey), url.QueryEscape(steamID))
 	res, err := http.Get(targetURL)
 	CheckErr(err)
 	body, err := ioutil.ReadAll(res.Body)
@@ -94,13 +95,10 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	}
 
 	if valid := IsValidAPIKey(string(body)); !valid {
-		go LogCall("GET", steamID, "Invalid URL", "403", red, startTime)
+		go LogCall("GET", steamID, "Invalid API key", "403", red, startTime)
 		var temp FriendsStruct
-		fmt.Println("Invalid API key: " + apiKey)
-		GetFriends(steamID, os.Getenv("APIKEY"), waitG)
 		return temp, fmt.Errorf("invalid api key: %s", apiKey)
 	}
-
 	// Gathers usernames from steamIDs
 	steamIDsList := ""
 	friendsListLen := len(friendsObj.FriendsList.Friends)
