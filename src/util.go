@@ -26,6 +26,7 @@ func CreateUserDataFolder() error {
 	_, err := os.Stat("../userData/")
 	if os.IsNotExist(err) {
 		os.Mkdir("../userData/", 0755)
+		return nil
 	}
 
 	if err != nil {

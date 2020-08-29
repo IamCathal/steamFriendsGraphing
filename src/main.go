@@ -265,7 +265,8 @@ func main() {
 	apiKeys, err := GetAPIKeys()
 	CheckErr(err)
 
-	CreateUserDataFolder()
+	err = CreateUserDataFolder()
+	CheckErr(err)
 
 	if len(os.Args) > 1 {
 		var waitG sync.WaitGroup
