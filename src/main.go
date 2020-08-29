@@ -69,7 +69,6 @@ type UserStatsStruct struct {
 func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer waitG.Done()
-
 	// Check to see if the steamID is in the valid format now to save time
 	if valid := IsValidFormatSteamID(steamID); !valid {
 		go LogCall("GET", steamID, "Invalid SteamID", "400", red, startTime)
@@ -247,45 +246,45 @@ func GetAPIKeys() ([]string, error) {
 	return nil, errors.New("No API key(s)")
 }
 
+func controlFunc(apiKeys []string, steamID string, statMode bool) {
+	var waitG sync.WaitGroup
+	waitG.Add(1)
+
+	err := CreateUserDataFolder()
+	CheckErr(err)
+
+	friendsObj, err := GetFriends(steamID, apiKeys[0], &waitG)
+	CheckErr(err)
+
+	numFriends := len(friendsObj.FriendsList.Friends)
+
+	fmt.Printf("Friends: %d\n", numFriends)
+	if statMode {
+		PrintUserDetails(apiKeys[0], steamID)
+		return
+	}
+
+	for i, friend := range friendsObj.FriendsList.Friends {
+		waitG.Add(1)
+		go GetFriends(friend.Steamid, apiKeys[i%(len(apiKeys))], &waitG)
+		// Sleep a bit to not annoy valve's servers
+		time.Sleep(100 * time.Millisecond)
+	}
+	waitG.Wait()
+}
+
 func main() {
 
-	level := flag.Int("level", 2, "Level of friends you want to crawl. 1 is your friends, 2 is mutual friends etc")
+	// level := flag.Int("level", 2, "Level of friends you want to crawl. 1 is your friends, 2 is mutual friends etc")
 	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
 	flag.Parse()
 
 	apiKeys, err := GetAPIKeys()
 	CheckErr(err)
 
-	err = CreateUserDataFolder()
-	CheckErr(err)
-
 	if len(os.Args) > 1 {
-		var waitG sync.WaitGroup
-		waitG.Add(1)
-
 		// Last argument should be the steamID
-		friendsObj, err := GetFriends(os.Args[len(os.Args)-1], apiKeys[0], &waitG)
-		CheckErr(err)
-
-		numFriends := len(friendsObj.FriendsList.Friends)
-
-		if *level > 1 {
-
-			fmt.Printf("Friends: %d\n", numFriends)
-			if *statMode {
-				PrintUserDetails(apiKeys[0], os.Args[len(os.Args)-1])
-				return
-			}
-
-			for i, friend := range friendsObj.FriendsList.Friends {
-				waitG.Add(1)
-				go GetFriends(friend.Steamid, apiKeys[i%(len(apiKeys))], &waitG)
-				// Sleep a bit to not annoy valve's servers
-				time.Sleep(100 * time.Millisecond)
-			}
-			waitG.Wait()
-		}
-
+		controlFunc(apiKeys, os.Args[len(os.Args)-1], *statMode)
 	} else {
 		fmt.Println("Incorrect arguments")
 		fmt.Println("./main [arguments] steamID")

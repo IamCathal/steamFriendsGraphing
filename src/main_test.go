@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"sync"
@@ -110,11 +111,12 @@ func TestInvalidUsername(t *testing.T) {
 func TestPrintUserDetails(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
 	steamID := "76561197960287930"
-
+	fmt.Println("")
 	err := PrintUserDetails(apiKeys[0], steamID)
 	if err != nil {
 		t.Error(err)
 	}
+	fmt.Println("")
 }
 
 func TestInvalidPrintUserDetails(t *testing.T) {
@@ -125,4 +127,13 @@ func TestInvalidPrintUserDetails(t *testing.T) {
 	if err == nil {
 		t.Error(err)
 	}
+}
+
+func TestExampleInvocation(t *testing.T) {
+	apiKeys := getAPIKeysForTesting()
+	steamID := "76561198144084014"
+	fmt.Println("")
+	controlFunc(apiKeys, steamID, true)
+	fmt.Println("")
+
 }
