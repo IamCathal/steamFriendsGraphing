@@ -24,6 +24,7 @@ Now you can run the script either by building and then running it like `./main [
 
 For the moment the easiest way to find your steam64ID is to use [Steam ID Finder](https://steamidfinder.com/)
 
+The unit tests will fail unless you set your the APIKey environment variable with `os.Setenv("APIKey", "your key")` before line 22 in `main_test.go`
 
 ## How do you get that coverage badge?
 
