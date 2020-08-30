@@ -55,10 +55,6 @@ func GetUsername(apiKey, steamID string) (string, error) {
 }
 
 func PrintUserDetails(apiKey, steamID string) error {
-
-	if valid := IsValidFormatSteamID(steamID); !valid {
-	}
-
 	// Get the target username from the ID
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
 		apiKey, steamID)
@@ -87,8 +83,13 @@ func PrintUserDetails(apiKey, steamID string) error {
 }
 
 func CreateUserDataFolder() error {
-	// Create the userData folder to hold logs if it doesn't exist
-	_, err := os.Stat("../userData/")
+	// Create the cache folder to hold logs if it doesn't exist
+	cacheFolder := "userData"
+	if os.Getenv("testing") == "" {
+		cacheFolder = "testData"
+	}
+
+	_, err := os.Stat(fmt.Sprintf("../%s/", cacheFolder))
 	if os.IsNotExist(err) {
 		os.Mkdir("../userData/", 0755)
 		return nil
@@ -148,7 +149,12 @@ func IsValidAPIKey(body string) bool {
 
 // CacheFileExists checks whether a given cached file exists
 func CacheFileExist(steamID string) bool {
-	_, err := os.Stat(fmt.Sprintf("../userData/%s.json", steamID))
+	cacheFolder := "userData"
+	if os.Getenv("testing") == "" {
+		cacheFolder = "testData"
+	}
+
+	_, err := os.Stat(fmt.Sprintf("../%s/%s.json", cacheFolder, steamID))
 	if os.IsNotExist(err) {
 		return false
 	}
@@ -167,4 +173,20 @@ func GetUsernameFromCacheFile(steamID string) (string, error) {
 	}
 
 	return "", fmt.Errorf("Cache file %s.json does not exist", steamID)
+}
+
+func GetCache(steamID string) (FriendsStruct, error) {
+	var temp FriendsStruct
+	cacheFolder := "userData"
+	if os.Getenv("testing") == "" {
+		cacheFolder = "testData"
+	}
+
+	if exists := CacheFileExist(steamID); exists {
+		content, _ := ioutil.ReadFile(fmt.Sprintf("../%s/%s.json", cacheFolder, steamID))
+		_ = json.Unmarshal(content, &temp)
+		return temp, nil
+	}
+
+	return temp, fmt.Errorf("Cache file %s.json does not exist", steamID)
 }

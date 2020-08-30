@@ -70,12 +70,14 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer waitG.Done()
 
-	if exists := CacheFileExist(steamID); exists {
-		username, err := GetUsernameFromCacheFile(steamID)
-		CheckErr(err)
-		go LogCall("[CACHE] GET", steamID, username, "200", green, startTime)
-		var temp FriendsStruct
-		return temp, nil
+	// If the cache exists and the env var to disable serving from cache is set
+	if exists := CacheFileExist(steamID); exists && os.Getenv("disablereadcache") != "" {
+		friendsObj, err := GetCache(steamID)
+		if err != nil {
+			return friendsObj, err
+		}
+		go LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
+		return friendsObj, nil
 	}
 
 	// Check to see if the steamID is in the valid format now to save time
@@ -212,9 +214,13 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 // WriteToFile writes a user's friendlist to a file for later processing
 func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
+	cacheFolder := "userData"
+	if os.Getenv("testing") == "" {
+		cacheFolder = "testData"
+	}
 
 	if existing := CacheFileExist(steamID); !existing {
-		fileLoc := fmt.Sprintf("../userData/%s.json", steamID)
+		fileLoc := fmt.Sprintf("../%s/%s.json", cacheFolder, steamID)
 		file, err := os.Create(fileLoc)
 		CheckErr(err)
 		defer file.Close()

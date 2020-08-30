@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 )
 
 type testGetFriendsInput struct {
@@ -45,17 +46,17 @@ func getAPIKeysForTesting() []string {
 
 func TestGetFriends(t *testing.T) {
 
-	if _, err := os.Stat("../userData/"); os.IsNotExist(err) {
+	if _, err := os.Stat("../testData/"); os.IsNotExist(err) {
 		// path/to/whatever does not exist
-		os.Mkdir("../userData/", 0755)
+		os.Mkdir("../testData/", 0755)
 	}
 
 	os.Setenv("testing", "")
+	os.Setenv("disablereadcache", "")
 
 	apiKeys := getAPIKeysForTesting()
 
 	var tests = []testGetFriendsInput{
-		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
 		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
 		{"76561198081485934", "invalid key", true},
 		{"7656119807862962", apiKeys[rand.Intn(len(apiKeys))], true},
@@ -85,6 +86,10 @@ func TestGetFriends(t *testing.T) {
 		}
 		waitG.Wait()
 	}
+	// Add a space and sleep for a second to keep
+	// the logs nice and clean
+	time.Sleep(2 * time.Second)
+	fmt.Printf("\n")
 
 }
 
@@ -118,12 +123,14 @@ func TestInvalidUsername(t *testing.T) {
 func TestPrintUserDetails(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
 	steamID := "76561197960287930"
+
 	fmt.Println("")
+	fmt.Printf("==================== Print user details ====================\n")
 	err := PrintUserDetails(apiKeys[0], steamID)
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println("")
+	fmt.Printf("============================================================\n\n")
 }
 
 func TestInvalidPrintUserDetails(t *testing.T) {
@@ -145,12 +152,12 @@ func TestExampleInvocation(t *testing.T) {
 		{"76561198245030292", false},
 	}
 
-	fmt.Println("")
+	fmt.Printf("\n================== Test Example Invocation =================\n")
 	for _, elem := range tests {
 		controlFunc(apiKeys, elem.steamID, elem.statMode)
 	}
-	fmt.Println("")
-
+	time.Sleep(2 * time.Second)
+	fmt.Printf("============================================================\n\n")
 }
 
 func TestGetUsernameFromCacheFile(t *testing.T) {
@@ -158,12 +165,9 @@ func TestGetUsernameFromCacheFile(t *testing.T) {
 	var tests = []testGetUsernameFromCacheFile{
 		{"76561198306145504", true},
 	}
-
-	fmt.Println("")
 	for _, elem := range tests {
 		_, err := GetUsernameFromCacheFile(elem.steamID)
 		if err != nil {
-			fmt.Println(err)
 			if !elem.shouldFail {
 				t.Errorf("didn't fail to get username for %s", elem.steamID)
 			}
@@ -172,8 +176,9 @@ func TestGetUsernameFromCacheFile(t *testing.T) {
 				"SteamID:", elem.steamID,
 			)
 		}
-
 	}
-	fmt.Println("")
+}
 
+func TestCleanup(t *testing.T) {
+	os.RemoveAll("../testData")
 }
