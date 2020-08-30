@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -143,4 +144,27 @@ func IsValidAPIKey(body string) bool {
 		return false
 	}
 	return true
+}
+
+// CacheFileExists checks whether a given cached file exists
+func CacheFileExist(steamID string) bool {
+	_, err := os.Stat(fmt.Sprintf("../userData/%s.json", steamID))
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func GetUsernameFromCacheFile(steamID string) (string, error) {
+	if exists := CacheFileExist(steamID); exists {
+		content, err := ioutil.ReadFile(fmt.Sprintf("../userData/%s.json", steamID))
+		if err != nil {
+			return "", err
+		}
+		// Lazy way of doing this but it works
+		arr := strings.Split(string(content), "\"")
+		return arr[3], nil
+	}
+
+	return "", fmt.Errorf("Cache file %s.json does not exist", steamID)
 }

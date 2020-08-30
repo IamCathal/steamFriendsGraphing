@@ -69,6 +69,15 @@ type UserStatsStruct struct {
 func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer waitG.Done()
+
+	if exists := CacheFileExist(steamID); exists {
+		username, err := GetUsernameFromCacheFile(steamID)
+		CheckErr(err)
+		go LogCall("[CACHE] GET", steamID, username, "200", green, startTime)
+		var temp FriendsStruct
+		return temp, nil
+	}
+
 	// Check to see if the steamID is in the valid format now to save time
 	if valid := IsValidFormatSteamID(steamID); !valid {
 		go LogCall("GET", steamID, "Invalid SteamID", "400", red, startTime)
@@ -149,7 +158,6 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 			if i < callCount {
 				// a full call of 100 friends
 				for k := 0; k < 100; k++ {
-					// fmt.Println(k + (i * 100))
 					steamIDsList += friendsObj.FriendsList.Friends[k+(i*100)].Steamid + ","
 				}
 			} else {
@@ -195,10 +203,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	CheckErr(err)
 	friendsObj.Username = username
 
-	// if testing env var is set, don't bother writing to file
-	if os.Getenv("testing") == "" {
-		WriteToFile(apiKey, steamID, friendsObj)
-	}
+	WriteToFile(apiKey, steamID, friendsObj)
 
 	// log the request along the round trip delay
 	go LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
@@ -208,15 +213,18 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 // WriteToFile writes a user's friendlist to a file for later processing
 func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
 
-	fileLoc := fmt.Sprintf("../userData/%s.json", steamID)
-	file, err := os.Create(fileLoc)
-	CheckErr(err)
-	defer file.Close()
+	if existing := CacheFileExist(steamID); !existing {
+		fileLoc := fmt.Sprintf("../userData/%s.json", steamID)
+		file, err := os.Create(fileLoc)
+		CheckErr(err)
+		defer file.Close()
 
-	jsonObj, err := json.Marshal(friends)
-	CheckErr(err)
+		jsonObj, err := json.Marshal(friends)
+		CheckErr(err)
 
-	_ = ioutil.WriteFile(fileLoc, jsonObj, 0644)
+		_ = ioutil.WriteFile(fileLoc, jsonObj, 0644)
+	}
+
 }
 
 // GetAPIKeys Retrieve the API key(s) to make requests with
@@ -258,6 +266,11 @@ func controlFunc(apiKeys []string, steamID string, statMode bool) {
 
 	numFriends := len(friendsObj.FriendsList.Friends)
 
+	if numFriends == 0 {
+		fmt.Printf("User has previously been queried\n")
+		return
+	}
+
 	fmt.Printf("Friends: %d\n", numFriends)
 	if statMode {
 		PrintUserDetails(apiKeys[0], steamID)
@@ -286,7 +299,6 @@ func main() {
 		// Last argument should be the steamID
 		controlFunc(apiKeys, os.Args[len(os.Args)-1], *statMode)
 	} else {
-		fmt.Println("Incorrect arguments")
-		fmt.Println("./main [arguments] steamID")
+		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
 	}
 }

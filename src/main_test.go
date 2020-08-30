@@ -14,6 +14,16 @@ type testGetFriendsInput struct {
 	shouldFail bool
 }
 
+type testControlFuncInput struct {
+	steamID  string
+	statMode bool
+}
+
+type testGetUsernameFromCacheFile struct {
+	steamID    string
+	shouldFail bool
+}
+
 func getAPIKeysForTesting() []string {
 	apiKeys := make([]string, 0)
 
@@ -42,15 +52,12 @@ func TestGetFriends(t *testing.T) {
 
 	os.Setenv("testing", "")
 
-	if os.Getenv("APIKEY") == "" {
-		t.Error("No APIKEY set")
-	}
-
 	apiKeys := getAPIKeysForTesting()
 
 	var tests = []testGetFriendsInput{
 		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
-		{"76561198282036055", "invalid key", true},
+		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
+		{"76561198081485934", "invalid key", true},
 		{"7656119807862962", apiKeys[rand.Intn(len(apiKeys))], true},
 		{"76561198271948679", apiKeys[rand.Intn(len(apiKeys))], false},
 		{"7656119796028793", apiKeys[rand.Intn(len(apiKeys))], true},
@@ -71,8 +78,8 @@ func TestGetFriends(t *testing.T) {
 				)
 			}
 		} else if testCase.shouldFail {
-			t.Error("Caught misbehaving testcase",
-				"APIKEY", os.Getenv("APIKEY"),
+			t.Error("caught misbehaving testcase",
+				"APIKEY:", testCase.apiKey,
 				"SteamID:", testCase.steamID,
 			)
 		}
@@ -131,9 +138,42 @@ func TestInvalidPrintUserDetails(t *testing.T) {
 
 func TestExampleInvocation(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
-	steamID := "76561198144084014"
+
+	var tests = []testControlFuncInput{
+		{"76561198282036055", true},
+		{"76561198210804275", true},
+		{"76561198245030292", false},
+	}
+
 	fmt.Println("")
-	controlFunc(apiKeys, steamID, true)
+	for _, elem := range tests {
+		controlFunc(apiKeys, elem.steamID, elem.statMode)
+	}
+	fmt.Println("")
+
+}
+
+func TestGetUsernameFromCacheFile(t *testing.T) {
+
+	var tests = []testGetUsernameFromCacheFile{
+		{"76561198306145504", true},
+	}
+
+	fmt.Println("")
+	for _, elem := range tests {
+		_, err := GetUsernameFromCacheFile(elem.steamID)
+		if err != nil {
+			fmt.Println(err)
+			if !elem.shouldFail {
+				t.Errorf("didn't fail to get username for %s", elem.steamID)
+			}
+		} else if elem.shouldFail {
+			t.Error("caught misbehaving testcase",
+				"SteamID:", elem.steamID,
+			)
+		}
+
+	}
 	fmt.Println("")
 
 }
