@@ -20,8 +20,17 @@ The goal of this project is to determine the degrees of seperation between any t
 ## Installation
 After cloning the repo you are going to need to get your [Steam Web API key](https://partner.steamgames.com/doc/webapi_overview/auth) and create a file called `APIKEYS.txt` and place it into the main directory.
 
-Now you can run the script either by building and then running it like `./main [arguments] [steam64ID]` or by running it with the command `go run main.go [arguments] [steam64ID]`.
+Now you can run the script either by building and then running it like `./main [arguments] [steam64ID]` or by running it with the command `go run main.go util.go [arguments] [steam64ID]`. To see all available arguments you can use `./main --help`
 
 For the moment the easiest way to find your steam64ID is to use [Steam ID Finder](https://steamidfinder.com/)
 
-The unit tests will fail unless you set your the APIKey environment variable with `os.Setenv("APIKey", "your key")` before line 22 in `main_test.go`
+
+## How do you get that coverage badge?
+
+I'm using Jordan Pole's [gopherbadger](https://github.com/jpoles1/gopherbadger) in a pre-commit hook. The git hook is quite simple and looks like this:
+```bash
+#!/bin/bash
+echo "Testing and generating coverage badge, this might take a few seconds"
+badge -png=true
+git add coverage_badge.png
+```
