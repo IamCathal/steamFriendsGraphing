@@ -31,7 +31,7 @@ func getAPIKeysForTesting() []string {
 	// When being test on the GitHub actions enviroment
 	// it should take keys from from the environment variables
 	// rather than the non existent APIKEYS.txt file
-	if os.Getenv("GITHUBACTIONS") != "" {
+	if _, exists := os.LookupEnv("GITHUBACTIONS"); exists {
 		apiKeys = append(apiKeys, os.Getenv("APIKEY"))
 		apiKeys = append(apiKeys, os.Getenv("APIKEY1"))
 	} else {
@@ -177,6 +177,26 @@ func TestGetUsernameFromCacheFile(t *testing.T) {
 			)
 		}
 	}
+}
+
+func TestGetCache(t *testing.T) {
+	_, err := GetCache("76561198282036055e")
+	if err == nil {
+		t.Error("invalid cache get did not throw an error")
+	}
+
+	// Will fail is not run as part of the whole test suite
+	// as this cache file will not have been written
+	_, err = GetCache("76561198282036055")
+	if err != nil {
+		t.Error("failed to get valid cache for user 76561198282036055")
+	}
+}
+
+func TestAllAPIKeys(t *testing.T) {
+	apiKeys := getAPIKeysForTesting()
+
+	CheckAPIKeys(apiKeys)
 }
 
 func TestCleanup(t *testing.T) {

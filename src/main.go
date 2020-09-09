@@ -215,7 +215,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 // WriteToFile writes a user's friendlist to a file for later processing
 func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
 	cacheFolder := "userData"
-	if os.Getenv("testing") == "" {
+	if _, exists := os.LookupEnv("testing"); exists {
 		cacheFolder = "testData"
 	}
 
@@ -296,10 +296,16 @@ func main() {
 
 	// level := flag.Int("level", 2, "Level of friends you want to crawl. 1 is your friends, 2 is mutual friends etc")
 	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
+	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
 	flag.Parse()
 
 	apiKeys, err := GetAPIKeys()
 	CheckErr(err)
+
+	if *testKeys == true {
+		CheckAPIKeys(apiKeys)
+		os.Exit(0)
+	}
 
 	if len(os.Args) > 1 {
 		// Last argument should be the steamID

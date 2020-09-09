@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -16,6 +18,7 @@ import (
 var (
 	green = "\033[32m"
 	red   = "\033[31m"
+	white = "\033[0;37m"
 )
 
 // Divmod divides a friendslist into stacks of 100 and the remainder
@@ -189,4 +192,28 @@ func GetCache(steamID string) (FriendsStruct, error) {
 	}
 
 	return temp, fmt.Errorf("Cache file %s.json does not exist", steamID)
+}
+
+func CheckAPIKeys(apiKeys []string) {
+	for i, apiKey := range apiKeys {
+		targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
+
+		if _, exists := os.LookupEnv("testing"); exists {
+			apiKey = "REDACTED"
+		}
+		fmt.Printf("[%d] Testing %s ...", i, apiKey)
+
+		res, err := http.Get(targetURL)
+		CheckErr(err)
+		body, err := ioutil.ReadAll(res.Body)
+		defer res.Body.Close()
+		CheckErr(err)
+
+		if valid := IsValidAPIKey(string(body)); !valid {
+			log.Fatalf("invalid api key %s", apiKey)
+		}
+		fmt.Printf("\r[%d] Testing %s ... %svalid!%s\n", i, apiKey, green, white)
+		time.Sleep(time.Duration(rand.Intn(670)+100) * time.Millisecond)
+	}
+	fmt.Printf("All API keys are valid!\n")
 }
