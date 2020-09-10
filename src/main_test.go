@@ -193,6 +193,18 @@ func TestGetCache(t *testing.T) {
 	}
 }
 
+func TestInitWorkerConfig(t *testing.T) {
+	_, err := InitWorkerConfig(4)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = InitWorkerConfig(-2)
+	if err == nil {
+		t.Errorf("failed to catch invalid levelCap of -2")
+	}
+}
+
 func TestAllAPIKeys(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
 

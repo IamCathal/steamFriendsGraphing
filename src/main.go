@@ -71,13 +71,15 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	defer waitG.Done()
 
 	// If the cache exists and the env var to disable serving from cache is set
-	if exists := CacheFileExist(steamID); exists && os.Getenv("disablereadcache") != "" {
-		friendsObj, err := GetCache(steamID)
-		if err != nil {
-			return friendsObj, err
+	if exists := CacheFileExist(steamID); exists {
+		if _, envVarExists := os.LookupEnv("disalereadcache"); envVarExists {
+			friendsObj, err := GetCache(steamID)
+			if err != nil {
+				return friendsObj, err
+			}
+			go LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
+			return friendsObj, nil
 		}
-		go LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
-		return friendsObj, nil
 	}
 
 	// Check to see if the steamID is in the valid format now to save time
