@@ -28,6 +28,7 @@ func Divmod(numerator, denominator int) (quotient, remainder int) {
 	return
 }
 
+// GetUsername gets a username from a given steamID
 func GetUsername(apiKey, steamID string) (string, error) {
 
 	if valid := IsValidFormatSteamID(steamID); !valid {
@@ -57,6 +58,8 @@ func GetUsername(apiKey, steamID string) (string, error) {
 	return userStatsObj.Response.Players[0].Personaname, nil
 }
 
+// PrintUserDetails is used to print a target users details without crawling
+// their friends list
 func PrintUserDetails(apiKey, steamID string) error {
 	// Get the target username from the ID
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
@@ -85,6 +88,8 @@ func PrintUserDetails(apiKey, steamID string) error {
 	return nil
 }
 
+// CreateUserDataFolder creates a folder for holding cache.
+// Can either be userData for regular use or testData when running under github actions.
 func CreateUserDataFolder() error {
 	// Create the cache folder to hold logs if it doesn't exist
 	cacheFolder := "userData"
@@ -104,7 +109,7 @@ func CreateUserDataFolder() error {
 	return nil
 }
 
-// LogCall logs a to the API with various stats on the request
+// LogCall logs a call to the API with various stats on the request
 func LogCall(method, steamID, username, status, statusColor string, startTime int64) {
 	endTime := time.Now().UnixNano() / int64(time.Millisecond)
 	delay := strconv.FormatInt((endTime - startTime), 10)
@@ -130,8 +135,7 @@ func IsValidFormatSteamID(steamID string) bool {
 	return true
 }
 
-// IsValidSteamID checks if the steamID was valid by checking
-// if the response had an error
+// IsValidSteamID checks if a steamID is valid by calling the API
 func IsValidSteamID(body string) bool {
 	match, _ := regexp.MatchString("(Internal Server Error)+", body)
 	if match {
@@ -140,8 +144,8 @@ func IsValidSteamID(body string) bool {
 	return true
 }
 
-// IsValidAPIKey checks if the API key is invalid based off an API call's
-// returned content
+// IsValidAPIKey checks if the API key is invalid based off of the API
+// response
 func IsValidAPIKey(body string) bool {
 	match, _ := regexp.MatchString("(Forbidden)+", body)
 	if match {
@@ -164,6 +168,8 @@ func CacheFileExist(steamID string) bool {
 	return true
 }
 
+// GetUsernameFromCacheFile gets the username for a given cache file
+// e.g 76561198063271448 -> moose
 func GetUsernameFromCacheFile(steamID string) (string, error) {
 	if exists := CacheFileExist(steamID); exists {
 		content, err := ioutil.ReadFile(fmt.Sprintf("../userData/%s.json", steamID))
@@ -178,6 +184,7 @@ func GetUsernameFromCacheFile(steamID string) (string, error) {
 	return "", fmt.Errorf("Cache file %s.json does not exist", steamID)
 }
 
+// GetCache gets a user's cached records if it exists
 func GetCache(steamID string) (FriendsStruct, error) {
 	var temp FriendsStruct
 	cacheFolder := "userData"
@@ -198,6 +205,8 @@ func CheckAPIKeys(apiKeys []string) {
 	for i, apiKey := range apiKeys {
 		targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
 
+		// Wouldn't want to log API keys to console if using
+		// the github actions testing environment
 		if _, exists := os.LookupEnv("testing"); exists {
 			apiKey = "REDACTED"
 		}
@@ -213,7 +222,7 @@ func CheckAPIKeys(apiKeys []string) {
 			log.Fatalf("invalid api key %s", apiKey)
 		}
 		fmt.Printf("\r[%d] Testing %s ... %svalid!%s\n", i, apiKey, green, white)
-		time.Sleep(time.Duration(rand.Intn(670)+100) * time.Millisecond)
+		time.Sleep(time.Duration(rand.Intn(1000)+100) * time.Millisecond)
 	}
 	fmt.Printf("All API keys are valid!\n")
 }

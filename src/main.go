@@ -15,19 +15,19 @@ import (
 )
 
 // IndivFriend holds profile information for
-// a single individual
+// a single user
 type IndivFriend struct {
 	Steamid string `json:"steamid"`
 	// Steamid is the default steamid64 value for a user
 	Relationship string `json:"relationship"`
 	// Relationship is always friend in this case
 	FriendSince int64 `json:"friend_since,omitempty"`
-	// FriendSince, unix timestamp of when the friend request was accepted
+	// FriendSince is the unix timestamp of when the friend request was accepted
 	Username string `json:"username"`
 	// Username is steam public username
 }
 
-// FriendsStruct messy but it holds the array of all friends
+// FriendsStruct is messy but it holds the array of all friends for a given user
 type FriendsStruct struct {
 	Username    string `json:"username"`
 	FriendsList struct {
@@ -35,7 +35,7 @@ type FriendsStruct struct {
 	} `json:"friendslist"`
 }
 
-// Player holds all account information for a given player. This is the
+// Player holds all account information for a given user. This is the
 // response from the getPlayerSummaries endpoint
 type Player struct {
 	Steamid                  string `json:"steamid"`
@@ -65,14 +65,14 @@ type UserStatsStruct struct {
 	} `json:"response"`
 }
 
-// GetFriends Returns the list of friends for a given user
+// GetFriends returns the list of friends for a given user and caches results if requested
 func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer waitG.Done()
 
 	// If the cache exists and the env var to disable serving from cache is set
 	if exists := CacheFileExist(steamID); exists {
-		if _, envVarExists := os.LookupEnv("disalereadcache"); envVarExists {
+		if _, envVarExists := os.LookupEnv("disablereadcache"); envVarExists {
 			friendsObj, err := GetCache(steamID)
 			if err != nil {
 				return friendsObj, err
@@ -111,6 +111,7 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 		var temp FriendsStruct
 		return temp, fmt.Errorf("invalid api key: %s", apiKey)
 	}
+
 	// Gathers usernames from steamIDs
 	steamIDsList := ""
 	friendsListLen := len(friendsObj.FriendsList.Friends)
@@ -235,8 +236,8 @@ func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
 
 }
 
-// GetAPIKeys Retrieve the API key(s) to make requests with
-// Keys must be stored in APIKEY(s).txt
+// GetAPIKeys retrieves the API key(s) to make requests with
+// API keys must be stored in APIKEY(s).txt
 func GetAPIKeys() ([]string, error) {
 	file, err := os.Open("APIKEYS.txt")
 	if err != nil {
@@ -296,7 +297,7 @@ func controlFunc(apiKeys []string, steamID string, statMode bool) {
 
 func main() {
 
-	// level := flag.Int("level", 2, "Level of friends you want to crawl. 1 is your friends, 2 is mutual friends etc")
+	level := flag.Int("level", 2, "Level of friends you want to crawl. 2 is your friends, 3 is mutual friends etc")
 	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
 	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
 	flag.Parse()
@@ -310,6 +311,9 @@ func main() {
 	}
 
 	if len(os.Args) > 1 {
+		if *level == 1 {
+			*statMode = true
+		}
 		// Last argument should be the steamID
 		controlFunc(apiKeys, os.Args[len(os.Args)-1], *statMode)
 	} else {
