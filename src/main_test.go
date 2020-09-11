@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"testing"
 )
@@ -44,9 +45,7 @@ func getAPIKeysForTesting() []string {
 // Setup and teardown function
 func TestMain(m *testing.M) {
 	os.Setenv("testing", "")
-	os.Setenv("disablereadcache", "")
 	if _, err := os.Stat("../testData/"); os.IsNotExist(err) {
-		// path/to/whatever does not exist
 		os.Mkdir("../testData/", 0755)
 	}
 
@@ -56,9 +55,52 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestAllAPIKeys(t *testing.T) {
+	apiKeys := getAPIKeysForTesting()
+
+	CheckAPIKeys(apiKeys)
+}
+
 func TestExampleInvocation(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
+	fmt.Printf("==================== Example Invocation ====================\n")
 	newControlFunc(apiKeys, "76561198130544932", 2)
+	fmt.Printf("\n")
+	newControlFunc(apiKeys, "76561198130544932", 1)
+	fmt.Printf("\n")
+	newControlFunc(apiKeys, "76561198130544932", 1)
+	fmt.Printf("============================================================\n")
+}
+
+func TestGetFriends(t *testing.T) {
+	apiKeys := getAPIKeysForTesting()
+
+	var tests = []testGetFriendsInput{
+		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
+		{"76561198081485934", "invalid key", true},
+		{"7656119807862962", apiKeys[rand.Intn(len(apiKeys))], true},
+		{"76561198271948679", apiKeys[rand.Intn(len(apiKeys))], false},
+		{"7656119796028793", apiKeys[rand.Intn(len(apiKeys))], true},
+		{"76561198144084014", apiKeys[rand.Intn(len(apiKeys))], false},
+		{"11111111111111111", apiKeys[rand.Intn(len(apiKeys))], true},
+		{"gibberish", apiKeys[rand.Intn(len(apiKeys))], true},
+	}
+
+	for _, testCase := range tests {
+		_, err := GetFriends(testCase.steamID, testCase.apiKey)
+		if err != nil {
+			if !testCase.shouldFail {
+				t.Error("Error:", err,
+					"SteamID:", testCase.steamID,
+				)
+			}
+		} else if testCase.shouldFail {
+			t.Error("caught misbehaving testcase",
+				"APIKEY:", testCase.apiKey,
+				"SteamID:", testCase.steamID,
+			)
+		}
+	}
 }
 
 func TestCreateDataFolder(t *testing.T) {
@@ -115,6 +157,7 @@ func TestGetUsernameFromCacheFile(t *testing.T) {
 
 	var tests = []testGetUsernameFromCacheFile{
 		{"76561198306145504", true},
+		{"76561198096639661", false},
 	}
 	for _, elem := range tests {
 		_, err := GetUsernameFromCacheFile(elem.steamID)
@@ -154,10 +197,4 @@ func TestInitWorkerConfig(t *testing.T) {
 	if err == nil {
 		t.Errorf("failed to catch invalid levelCap of -2")
 	}
-}
-
-func TestAllAPIKeys(t *testing.T) {
-	apiKeys := getAPIKeysForTesting()
-
-	CheckAPIKeys(apiKeys)
 }
