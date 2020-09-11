@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"sync"
 	"sync/atomic"
 )
@@ -10,7 +9,7 @@ import (
 type jobsStruct struct {
 	level   int
 	steamID string
-	// APIKey  string
+	APIKey  string
 }
 
 type workerConfig struct {
@@ -43,44 +42,43 @@ func InitWorkerConfig(levelCap int) (*workerConfig, error) {
 	return workConfig, nil
 }
 
-func Worker(jobs <-chan jobsStruct, results chan<- jobsStruct, cfg workerConfig, activeJobs *int64) {
+func Worker(jobs <-chan jobsStruct, results chan<- jobsStruct, cfg *workerConfig, activeJobs *int64) {
 	for {
 		cfg.jobsMutex.Lock()
 		job := <-jobs
 		cfg.jobsMutex.Unlock()
 
-		// Get friends list for this current user
-		friendsObj, err := GetFriends(job.steamID, os.Getenv("APIKEY"), cfg.wg)
-		CheckErr(err)
+		// Temporary fix, sometimes level 0s get put onto jobs queue
+		if job.level != 0 {
+			friendsObj, err := GetFriends(job.steamID, job.APIKey)
+			CheckErr(err)
 
-		numFriends := len(friendsObj.FriendsList.Friends)
+			numFriends := len(friendsObj.FriendsList.Friends)
 
-		// For each friend we'll add them to the jobs queue if
-		// their level is within our range
-		for i := 0; i < numFriends; i++ {
+			// For each friend we'll add them to the jobs queue if
+			// their level is within our range
+			for i := 0; i < numFriends; i++ {
+				indivFriends := jobsStruct{
+					level:   job.level + 1,
+					steamID: friendsObj.FriendsList.Friends[i].Steamid,
+				}
 
-			indivFriends := jobsStruct{
-				level:   job.level + 1,
-				steamID: friendsObj.FriendsList.Friends[i].Steamid,
+				// If their level is within range, we'll scrape them in the future
+				// and therefore we up the counter of activeJobs
+				if indivFriends.level <= cfg.levelCap {
+					atomic.AddInt64(activeJobs, 1)
+				}
+
+				cfg.resMutex.Lock()
+				results <- indivFriends
+				cfg.resMutex.Unlock()
 			}
 
-			fmt.Printf("New friend [Level %d][From %s][SteamID %s][Len %d]\n", indivFriends.level, job.steamID, indivFriends.steamID, len(jobs))
+			cfg.activeJobsMutex.Lock()
+			atomic.AddInt64(activeJobs, -1)
+			cfg.activeJobsMutex.Unlock()
 
-			// If their level is within range, we'll scrape them in the future
-			// and therefore we up the counter of activeJobs
-			if indivFriends.level <= cfg.levelCap {
-				atomic.AddInt64(activeJobs, 1)
-			}
-
-			cfg.resMutex.Lock()
-			results <- indivFriends
-			cfg.resMutex.Unlock()
+			cfg.wg.Done()
 		}
-
-		cfg.activeJobsMutex.Lock()
-		atomic.AddInt64(activeJobs, -1)
-		cfg.activeJobsMutex.Unlock()
-
-		cfg.wg.Done()
 	}
 }

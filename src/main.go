@@ -1,16 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"sync"
 	"time"
 )
 
@@ -66,27 +64,26 @@ type UserStatsStruct struct {
 }
 
 // GetFriends returns the list of friends for a given user and caches results if requested
-func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, error) {
+func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	defer waitG.Done()
 
-	// If the cache exists and the env var to disable serving from cache is set
+	// If the cache exists and the env var to disable serving from cache is not set
 	if exists := CacheFileExist(steamID); exists {
-		if _, envVarExists := os.LookupEnv("disablereadcache"); envVarExists {
+		if exists := IsEnvVarSet("disablereadcache"); !exists {
 			friendsObj, err := GetCache(steamID)
 			if err != nil {
 				return friendsObj, err
 			}
-			go LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
+			LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
 			return friendsObj, nil
 		}
 	}
 
 	// Check to see if the steamID is in the valid format now to save time
 	if valid := IsValidFormatSteamID(steamID); !valid {
-		go LogCall("GET", steamID, "Invalid SteamID", "400", red, startTime)
+		LogCall("GET", steamID, "Invalid SteamID", "400", red, startTime)
 		var temp FriendsStruct
-		return temp, errors.New("Invalid steamID")
+		return temp, fmt.Errorf("invalid steamID %s, apikey %s\n", steamID, apiKey)
 	}
 
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", url.QueryEscape(apiKey), url.QueryEscape(steamID))
@@ -101,13 +98,13 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 
 	// If the HTTP response has error messages in it handle them accordingly
 	if valid := IsValidSteamID(string(body)); !valid {
-		go LogCall("GET", steamID, friendsObj.Username, "400", red, startTime)
+		LogCall("GET", steamID, friendsObj.Username, "400", red, startTime)
 		var temp FriendsStruct
 		return temp, errors.New("Invalid steamID given")
 	}
 
 	if valid := IsValidAPIKey(string(body)); !valid {
-		go LogCall("GET", steamID, "Invalid API key", "403", red, startTime)
+		LogCall("GET", steamID, "Invalid API key", "403", red, startTime)
 		var temp FriendsStruct
 		return temp, fmt.Errorf("invalid api key: %s", apiKey)
 	}
@@ -211,112 +208,97 @@ func GetFriends(steamID, apiKey string, waitG *sync.WaitGroup) (FriendsStruct, e
 	WriteToFile(apiKey, steamID, friendsObj)
 
 	// log the request along the round trip delay
-	go LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
+	LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
 	return friendsObj, nil
 }
 
-// WriteToFile writes a user's friendlist to a file for later processing
-func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
-	cacheFolder := "userData"
-	if _, exists := os.LookupEnv("testing"); exists {
-		cacheFolder = "testData"
-	}
-
-	if existing := CacheFileExist(steamID); !existing {
-		fileLoc := fmt.Sprintf("../%s/%s.json", cacheFolder, steamID)
-		file, err := os.Create(fileLoc)
-		CheckErr(err)
-		defer file.Close()
-
-		jsonObj, err := json.Marshal(friends)
-		CheckErr(err)
-
-		_ = ioutil.WriteFile(fileLoc, jsonObj, 0644)
-	}
-
-}
-
-// GetAPIKeys retrieves the API key(s) to make requests with
-// API keys must be stored in APIKEY(s).txt
-func GetAPIKeys() ([]string, error) {
-	file, err := os.Open("APIKEYS.txt")
+func newControlFunc(apiKeys []string, steamID string, levelCap int) {
+	workConfig, err := InitWorkerConfig(levelCap)
 	if err != nil {
-		CheckErr(errors.New("No APIKEYS.txt file found"))
-	}
-	defer file.Close()
-
-	apiKeys := make([]string, 0)
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		apiKeys = append(apiKeys, scanner.Text())
+		log.Fatal(err)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, errors.New("Error reading APIKEYS.txt")
+	jobs := make(chan jobsStruct, 50000)
+	results := make(chan jobsStruct, 50000)
+
+	var activeJobs int64 = 0
+	friendsPerLevel := make(map[int]int)
+
+	for i := 0; i < 2; i++ {
+		go Worker(jobs, results, workConfig, &activeJobs)
 	}
 
-	if len(apiKeys) > 0 {
-		return apiKeys, nil
-	}
-	// APIKeys.txt does exist but it is empty
-	return nil, errors.New("No API key(s)")
-}
-
-func controlFunc(apiKeys []string, steamID string, statMode bool) {
-	var waitG sync.WaitGroup
-	waitG.Add(1)
-
-	err := CreateUserDataFolder()
-	CheckErr(err)
-
-	friendsObj, err := GetFriends(steamID, apiKeys[0], &waitG)
-	CheckErr(err)
-
-	numFriends := len(friendsObj.FriendsList.Friends)
-
-	if numFriends == 0 {
-		fmt.Printf("User has previously been queried\n")
-		return
+	tempStruct := jobsStruct{
+		level:   1,
+		steamID: steamID,
+		APIKey:  apiKeys[0],
 	}
 
-	fmt.Printf("Friends: %d\n", numFriends)
-	if statMode {
-		PrintUserDetails(apiKeys[0], steamID)
-		return
+	workConfig.wg.Add(1)
+	activeJobs++
+	jobs <- tempStruct
+	friendsPerLevel[1]++
+
+	reachableFriends := 0
+	totalFriends := 0
+	i := 1
+
+	for {
+		if activeJobs == 0 {
+			break
+		}
+		result := <-results
+		totalFriends++
+		friendsPerLevel[result.level]++
+
+		if result.level <= levelCap {
+			reachableFriends++
+
+			newJob := jobsStruct{
+				level:   result.level,
+				steamID: result.steamID,
+				APIKey:  apiKeys[i%len(apiKeys)],
+			}
+			workConfig.wg.Add(1)
+			jobs <- newJob
+			i++
+
+		}
 	}
 
-	for i, friend := range friendsObj.FriendsList.Friends {
-		waitG.Add(1)
-		go GetFriends(friend.Steamid, apiKeys[i%(len(apiKeys))], &waitG)
-		// Sleep a bit to not annoy valve's servers
-		time.Sleep(100 * time.Millisecond)
-	}
-	waitG.Wait()
+	workConfig.wg.Wait()
+	fmt.Println(len(jobs), len(results))
+	fmt.Printf("\n============== Done ==============\nTotal friends: %d\nCrawled friends: %d\n==================================\n", totalFriends, reachableFriends)
+	fmt.Printf("%+v\n", friendsPerLevel)
+	close(jobs)
+	close(results)
+
 }
 
 func main() {
 
-	level := flag.Int("level", 2, "Level of friends you want to crawl. 2 is your friends, 3 is mutual friends etc")
-	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
-	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
-	flag.Parse()
+	// level := flag.Int("level", 2, "Level of friends you want to crawl. 2 is your friends, 3 is mutual friends etc")
+	// statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
+	// testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
+	// flag.Parse()
 
 	apiKeys, err := GetAPIKeys()
 	CheckErr(err)
 
-	if *testKeys == true {
-		CheckAPIKeys(apiKeys)
-		os.Exit(0)
-	}
+	newControlFunc(apiKeys, os.Args[len(os.Args)-1], 2)
 
-	if len(os.Args) > 1 {
-		if *level == 1 {
-			*statMode = true
-		}
-		// Last argument should be the steamID
-		controlFunc(apiKeys, os.Args[len(os.Args)-1], *statMode)
-	} else {
-		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
-	}
+	// if *testKeys == true {
+	// 	CheckAPIKeys(apiKeys)
+	// 	os.Exit(0)
+	// }
+
+	// if len(os.Args) > 1 {
+	// 	if *level == 1 {
+	// 		*statMode = true
+	// 	}
+	// 	// Last argument should be the steamID
+	// 	controlFunc(apiKeys, os.Args[len(os.Args)-1], *statMode)
+	// } else {
+	// 	fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
+	// }
 }

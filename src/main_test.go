@@ -2,11 +2,8 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
-	"sync"
 	"testing"
-	"time"
 )
 
 type testGetFriendsInput struct {
@@ -31,7 +28,7 @@ func getAPIKeysForTesting() []string {
 	// When being test on the GitHub actions enviroment
 	// it should take keys from from the environment variables
 	// rather than the non existent APIKEYS.txt file
-	if _, exists := os.LookupEnv("GITHUBACTIONS"); exists {
+	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
 		apiKeys = append(apiKeys, os.Getenv("APIKEY"))
 		apiKeys = append(apiKeys, os.Getenv("APIKEY1"))
 	} else {
@@ -44,53 +41,24 @@ func getAPIKeysForTesting() []string {
 	return apiKeys
 }
 
-func TestGetFriends(t *testing.T) {
-
+// Setup and teardown function
+func TestMain(m *testing.M) {
+	os.Setenv("testing", "")
+	os.Setenv("disablereadcache", "")
 	if _, err := os.Stat("../testData/"); os.IsNotExist(err) {
 		// path/to/whatever does not exist
 		os.Mkdir("../testData/", 0755)
 	}
 
-	os.Setenv("testing", "")
-	os.Setenv("disablereadcache", "")
+	code := m.Run()
 
+	os.RemoveAll("../testData")
+	os.Exit(code)
+}
+
+func TestExampleInvocation(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
-
-	var tests = []testGetFriendsInput{
-		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
-		{"76561198081485934", "invalid key", true},
-		{"7656119807862962", apiKeys[rand.Intn(len(apiKeys))], true},
-		{"76561198271948679", apiKeys[rand.Intn(len(apiKeys))], false},
-		{"7656119796028793", apiKeys[rand.Intn(len(apiKeys))], true},
-		{"76561198144084014", apiKeys[rand.Intn(len(apiKeys))], false},
-		{"11111111111111111", apiKeys[rand.Intn(len(apiKeys))], true},
-		{"gibberish", apiKeys[rand.Intn(len(apiKeys))], true},
-	}
-
-	var waitG sync.WaitGroup
-
-	for _, testCase := range tests {
-		waitG.Add(1)
-		_, err := GetFriends(testCase.steamID, testCase.apiKey, &waitG)
-		if err != nil {
-			if !testCase.shouldFail {
-				t.Error("Error:", err,
-					"SteamID:", testCase.steamID,
-				)
-			}
-		} else if testCase.shouldFail {
-			t.Error("caught misbehaving testcase",
-				"APIKEY:", testCase.apiKey,
-				"SteamID:", testCase.steamID,
-			)
-		}
-		waitG.Wait()
-	}
-	// Add a space and sleep for a second to keep
-	// the logs nice and clean
-	time.Sleep(2 * time.Second)
-	fmt.Printf("\n")
-
+	newControlFunc(apiKeys, "76561198130544932", 2)
 }
 
 func TestCreateDataFolder(t *testing.T) {
@@ -143,23 +111,6 @@ func TestInvalidPrintUserDetails(t *testing.T) {
 	}
 }
 
-func TestExampleInvocation(t *testing.T) {
-	apiKeys := getAPIKeysForTesting()
-
-	var tests = []testControlFuncInput{
-		{"76561198282036055", true},
-		{"76561198210804275", true},
-		{"76561198245030292", false},
-	}
-
-	fmt.Printf("\n================== Test Example Invocation =================\n")
-	for _, elem := range tests {
-		controlFunc(apiKeys, elem.steamID, elem.statMode)
-	}
-	time.Sleep(2 * time.Second)
-	fmt.Printf("============================================================\n\n")
-}
-
 func TestGetUsernameFromCacheFile(t *testing.T) {
 
 	var tests = []testGetUsernameFromCacheFile{
@@ -185,11 +136,11 @@ func TestGetCache(t *testing.T) {
 		t.Error("invalid cache get did not throw an error")
 	}
 
-	// Will fail is not run as part of the whole test suite
+	// Will fail if not run as part of the whole test suite
 	// as this cache file will not have been written
-	_, err = GetCache("76561198282036055")
-	if err != nil {
-		t.Error("failed to get valid cache for user 76561198282036055")
+	_, err = GetCache("76561198245030292")
+	if err == nil {
+		t.Error("Got invalid cache for user 76561198245030292")
 	}
 }
 
@@ -209,8 +160,4 @@ func TestAllAPIKeys(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
 
 	CheckAPIKeys(apiKeys)
-}
-
-func TestCleanup(t *testing.T) {
-	os.RemoveAll("../testData")
 }

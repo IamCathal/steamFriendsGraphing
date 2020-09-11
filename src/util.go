@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -93,7 +95,7 @@ func PrintUserDetails(apiKey, steamID string) error {
 func CreateUserDataFolder() error {
 	// Create the cache folder to hold logs if it doesn't exist
 	cacheFolder := "userData"
-	if os.Getenv("testing") == "" {
+	if exists := IsEnvVarSet("testing"); exists {
 		cacheFolder = "testData"
 	}
 
@@ -157,7 +159,7 @@ func IsValidAPIKey(body string) bool {
 // CacheFileExists checks whether a given cached file exists
 func CacheFileExist(steamID string) bool {
 	cacheFolder := "userData"
-	if os.Getenv("testing") == "" {
+	if exists := IsEnvVarSet("testing"); exists {
 		cacheFolder = "testData"
 	}
 
@@ -188,7 +190,7 @@ func GetUsernameFromCacheFile(steamID string) (string, error) {
 func GetCache(steamID string) (FriendsStruct, error) {
 	var temp FriendsStruct
 	cacheFolder := "userData"
-	if os.Getenv("testing") == "" {
+	if exists := IsEnvVarSet("testing"); exists {
 		cacheFolder = "testData"
 	}
 
@@ -207,7 +209,7 @@ func CheckAPIKeys(apiKeys []string) {
 
 		// Wouldn't want to log API keys to console if using
 		// the github actions testing environment
-		if _, exists := os.LookupEnv("testing"); exists {
+		if exists := IsEnvVarSet("testing"); exists {
 			apiKey = "REDACTED"
 		}
 		fmt.Printf("[%d] Testing %s ...", i, apiKey)
@@ -225,4 +227,59 @@ func CheckAPIKeys(apiKeys []string) {
 		time.Sleep(time.Duration(rand.Intn(1000)+100) * time.Millisecond)
 	}
 	fmt.Printf("All API keys are valid!\n")
+}
+
+func IsEnvVarSet(envvar string) bool {
+	if _, exists := os.LookupEnv(envvar); exists {
+		return true
+	}
+	return false
+}
+
+// GetAPIKeys retrieves the API key(s) to make requests with
+// API keys must be stored in APIKEY(s).txt
+func GetAPIKeys() ([]string, error) {
+	file, err := os.Open("APIKEYS.txt")
+	if err != nil {
+		CheckErr(errors.New("No APIKEYS.txt file found"))
+	}
+	defer file.Close()
+
+	apiKeys := make([]string, 0)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		apiKeys = append(apiKeys, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, errors.New("Error reading APIKEYS.txt")
+	}
+
+	if len(apiKeys) > 0 {
+		return apiKeys, nil
+	}
+	// APIKeys.txt does exist but it is empty
+	return nil, errors.New("No API key(s)")
+}
+
+// WriteToFile writes a user's friendlist to a file for later processing
+func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
+	cacheFolder := "userData"
+	if exists := IsEnvVarSet("testing"); exists {
+		cacheFolder = "testData"
+	}
+
+	if existing := CacheFileExist(steamID); !existing {
+		fileLoc := fmt.Sprintf("../%s/%s.json", cacheFolder, steamID)
+		file, err := os.Create(fileLoc)
+		CheckErr(err)
+		defer file.Close()
+
+		jsonObj, err := json.Marshal(friends)
+		CheckErr(err)
+
+		_ = ioutil.WriteFile(fileLoc, jsonObj, 0644)
+	}
+
 }
