@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -277,28 +278,34 @@ func newControlFunc(apiKeys []string, steamID string, levelCap int) {
 
 func main() {
 
-	// level := flag.Int("level", 2, "Level of friends you want to crawl. 2 is your friends, 3 is mutual friends etc")
-	// statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
-	// testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
-	// flag.Parse()
+	level := flag.Int("level", 2, "Level of friends you want to crawl. 2 is your friends, 3 is mutual friends etc")
+	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
+	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
+	flag.Parse()
 
 	apiKeys, err := GetAPIKeys()
 	CheckErr(err)
 
-	newControlFunc(apiKeys, os.Args[len(os.Args)-1], 2)
+	if *testKeys == true {
+		CheckAPIKeys(apiKeys)
+		return
+	}
 
-	// if *testKeys == true {
-	// 	CheckAPIKeys(apiKeys)
-	// 	os.Exit(0)
-	// }
+	if *statMode {
+		err := PrintUserDetails(apiKeys[0], os.Args[len(os.Args)-1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
-	// if len(os.Args) > 1 {
-	// 	if *level == 1 {
-	// 		*statMode = true
-	// 	}
-	// 	// Last argument should be the steamID
-	// 	controlFunc(apiKeys, os.Args[len(os.Args)-1], *statMode)
-	// } else {
-	// 	fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
-	// }
+	if len(os.Args) > 1 {
+		if *level == 1 {
+			*statMode = true
+		}
+		// Last argument should be the steamID
+		newControlFunc(apiKeys, os.Args[len(os.Args)-1], *level)
+	} else {
+		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
+	}
 }
