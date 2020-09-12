@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -212,19 +213,30 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan jobsStruct) (Frie
 	return friendsObj, nil
 }
 
-func newControlFunc(apiKeys []string, steamID string, levelCap int) {
-	workConfig, err := InitWorkerConfig(levelCap)
+func newControlFunc(apiKeys []string, steamID string, levelCap, workerAmount int) {
+	workConfig, err := InitWorkerConfig(levelCap, workerAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	jobs := make(chan jobsStruct, 50000)
-	results := make(chan jobsStruct, 50000)
+	// After level 3 the amount of friends gets CRAZY
+	// Therefore some rapid scaling is needed
+	// Level 2: 8100 buffer length
+	// Level 3: 729000 buffer length
+	// Level 4: 6.561e+07 buffer length (This is not feasable to crawl)
+	chanLen := 0
+	if levelCap <= 2 {
+		chanLen = 700
+	} else {
+		chanLen = int(math.Pow(90, float64(levelCap)))
+	}
+	jobs := make(chan jobsStruct, chanLen)
+	results := make(chan jobsStruct, chanLen)
 
 	var activeJobs int64 = 0
 	friendsPerLevel := make(map[int]int)
 
-	for i := 0; i < 6; i++ {
+	for i := 0; i < workConfig.workerAmount; i++ {
 		go Worker(jobs, results, workConfig, &activeJobs)
 	}
 
@@ -267,7 +279,7 @@ func newControlFunc(apiKeys []string, steamID string, levelCap int) {
 	}
 
 	workConfig.wg.Wait()
-	fmt.Printf("\n============== Done ==============\nTotal friends: %d\nCrawled friends: %d\nFriends per level: %+v\n==================================\n", totalFriends, reachableFriends, friendsPerLevel)
+	fmt.Printf("\n=============== Done ================\nTotal friends: %d\nCrawled friends: %d\nFriends per level: %+v\n=====================================\n", totalFriends, reachableFriends, friendsPerLevel)
 	close(jobs)
 	close(results)
 
@@ -278,6 +290,7 @@ func main() {
 	level := flag.Int("level", 2, "Level of friends you want to crawl. 2 is your friends, 3 is mutual friends etc")
 	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
 	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
+	workerAmount := flag.Int("workeramount", 2, "Amount of workers that are crawling")
 	flag.Parse()
 
 	apiKeys, err := GetAPIKeys()
@@ -301,7 +314,7 @@ func main() {
 			*statMode = true
 		}
 		// Last argument should be the steamID
-		newControlFunc(apiKeys, os.Args[len(os.Args)-1], *level)
+		newControlFunc(apiKeys, os.Args[len(os.Args)-1], *level, *workerAmount)
 	} else {
 		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
 	}

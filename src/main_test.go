@@ -64,16 +64,17 @@ func TestAllAPIKeys(t *testing.T) {
 func TestExampleInvocation(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
 	fmt.Printf("==================== Example Invocation ====================\n")
-	newControlFunc(apiKeys, "76561198130544932", 2)
+	newControlFunc(apiKeys, "76561198130544932", 2, 2)
 	fmt.Printf("\n")
-	newControlFunc(apiKeys, "76561198130544932", 1)
+	newControlFunc(apiKeys, "76561198130544932", 1, 1)
 	fmt.Printf("\n")
-	newControlFunc(apiKeys, "76561198130544932", 1)
+	newControlFunc(apiKeys, "76561198130544932", 1, 1)
 	fmt.Printf("============================================================\n")
 }
 
 func TestGetFriends(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
+	jobs := make(chan jobsStruct, 100)
 
 	var tests = []testGetFriendsInput{
 		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
@@ -87,7 +88,7 @@ func TestGetFriends(t *testing.T) {
 	}
 
 	for _, testCase := range tests {
-		_, err := GetFriends(testCase.steamID, testCase.apiKey)
+		_, err := GetFriends(testCase.steamID, testCase.apiKey, 1, jobs)
 		if err != nil {
 			if !testCase.shouldFail {
 				t.Error("Error:", err,
@@ -188,13 +189,23 @@ func TestGetCache(t *testing.T) {
 }
 
 func TestInitWorkerConfig(t *testing.T) {
-	_, err := InitWorkerConfig(4)
+	_, err := InitWorkerConfig(4, 15)
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = InitWorkerConfig(-2)
+	_, err = InitWorkerConfig(-2, 20)
 	if err == nil {
 		t.Errorf("failed to catch invalid levelCap of -2")
+	}
+
+	_, err = InitWorkerConfig(2, 625)
+	if err == nil {
+		t.Errorf("failed to catch invalid worker amount of of 625")
+	}
+
+	_, err = InitWorkerConfig(2, 0)
+	if err == nil {
+		t.Errorf("failed to catch invalid worker amount of 0")
 	}
 }

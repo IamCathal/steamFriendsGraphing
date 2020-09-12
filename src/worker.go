@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"sync/atomic"
 )
@@ -17,14 +18,22 @@ type workerConfig struct {
 	resMutex        *sync.Mutex
 	activeJobsMutex *sync.Mutex
 	wg              *sync.WaitGroup
+	jobs            *chan jobsStruct
+	results         *chan jobsStruct
 	levelCap        int
+	workerAmount    int
 }
 
-func InitWorkerConfig(levelCap int) (*workerConfig, error) {
+func InitWorkerConfig(levelCap, workerAmount int) (*workerConfig, error) {
 
 	if levelCap < 1 || levelCap > 4 {
 		temp := &workerConfig{}
-		return temp, fmt.Errorf("invalid levelCap %d given. levelCap must be in range 1-4 (inclusive)", levelCap)
+		return temp, fmt.Errorf("invalid level %d given. levelCap must be in range 1-4 (inclusive)", levelCap)
+	}
+
+	if workerAmount < 1 || workerAmount > 60 {
+		temp := &workerConfig{}
+		return temp, fmt.Errorf("invalid worker amount %d given. worker amount must be in range 1-60 (inclusive)", levelCap)
 	}
 
 	var wg sync.WaitGroup
@@ -38,7 +47,18 @@ func InitWorkerConfig(levelCap int) (*workerConfig, error) {
 		activeJobsMutex: &activeJobsMutex,
 		wg:              &wg,
 		levelCap:        levelCap,
+		workerAmount:    workerAmount,
 	}
+	fmt.Printf("======================================\n")
+	fmt.Printf("       Crawler configuration\n")
+	fmt.Printf("Level:\t\t%d\n", levelCap)
+	fmt.Printf("Worker amount:\t%d\n", workerAmount)
+	if levelCap <= 2 {
+		fmt.Printf("Channel len:\t700\n")
+	} else {
+		fmt.Printf("Channel len:\t%d\n", int(math.Pow(90, float64(levelCap))))
+	}
+	fmt.Printf("======================================\n")
 	return workConfig, nil
 }
 
