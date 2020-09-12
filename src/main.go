@@ -65,7 +65,7 @@ type UserStatsStruct struct {
 }
 
 // GetFriends returns the list of friends for a given user and caches results if requested
-func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
+func GetFriends(steamID, apiKey string, level int, jobs <-chan jobsStruct) (FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 
 	// If the cache exists and the env var to disable serving from cache is not set
@@ -120,7 +120,6 @@ func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 
 	// less than 100 friends, only 1 call is needed
 	if callCount < 1 {
-
 		for ind, val := range friendsObj.FriendsList.Friends {
 			if ind < friendsListLen-1 {
 				steamIDsList += val.Steamid + ","
@@ -194,7 +193,7 @@ func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 				}
 			} else {
 				for k := 0; k < remainder; k++ {
-					friendsObj.FriendsList.Friends[k+(i*100)].Username = friendsMap[friendsObj.FriendsList.Friends[k].Steamid]
+					friendsObj.FriendsList.Friends[k+(i*100)].Username = friendsMap[friendsObj.FriendsList.Friends[k+(i*100)].Steamid]
 				}
 			}
 
@@ -209,7 +208,7 @@ func GetFriends(steamID, apiKey string) (FriendsStruct, error) {
 	WriteToFile(apiKey, steamID, friendsObj)
 
 	// log the request along the round trip delay
-	LogCall("GET", steamID, friendsObj.Username, "200", green, startTime)
+	LogCall(fmt.Sprintf("GET [%d][%d]", level, len(jobs)), steamID, friendsObj.Username, "200", green, startTime)
 	return friendsObj, nil
 }
 
@@ -225,7 +224,7 @@ func newControlFunc(apiKeys []string, steamID string, levelCap int) {
 	var activeJobs int64 = 0
 	friendsPerLevel := make(map[int]int)
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 6; i++ {
 		go Worker(jobs, results, workConfig, &activeJobs)
 	}
 

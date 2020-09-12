@@ -50,7 +50,7 @@ func Worker(jobs <-chan jobsStruct, results chan<- jobsStruct, cfg *workerConfig
 
 		// Temporary fix, sometimes level 0s get put onto jobs queue
 		if job.level != 0 {
-			friendsObj, err := GetFriends(job.steamID, job.APIKey)
+			friendsObj, err := GetFriends(job.steamID, job.APIKey, cfg.levelCap, jobs)
 			CheckErr(err)
 
 			numFriends := len(friendsObj.FriendsList.Friends)
