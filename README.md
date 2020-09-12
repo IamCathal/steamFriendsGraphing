@@ -17,6 +17,33 @@ The goal of this project is to determine the degrees of seperation between any t
 ## What is a degree of seperation?
 *"Six degrees of separation is the idea that all people are six, or fewer, social connections away from each other. Also known as the 6 Handshakes rule. As a result, a chain of "a friend of a friend" statements can be made to connect any two people in a maximum of six steps."* - [Wikipedia](https://en.wikipedia.org/wiki/Six_degrees_of_separation)
 
+## How does the program work?
+
+The application can be split into two clear halves. One half does the crawling to gather the information needed and the other compiles this data into a graph format.
+
+### Crawling
+Without utilizing some form of concurrency crawling would take forever. Since the application has a lot of downtime in waiting for API calls to return and it's not too CPU intensive overall using concurrency to process multiple users at once is key. The current implementation uses a [worker pool](https://gobyexample.com/worker-pools). 
+
+A worker pool allows the application to place jobs into a pool where workers can then asynchronously pull them down and process them. This is the best way of going about this problem and the amount of workers can be set by the user to increase overall throughput.
+
+
+<p align="center">
+    <img
+      alt="worker pool diagram with gophers"
+      src="https://miro.medium.com/max/800/1*ugshDOhXfC287WWhG4IfSA.jpeg"
+      width="550"
+    />
+  </a>
+</p>
+
+<p align="center">
+ Heres a nice illustration of a worker pool courtesy of <a href="https://medium.com/@j.d.livni">Joseph Livni</a>
+</p>
+
+
+### Graphing
+Graphing functionality is in the pipeline.
+
 ## Installation
 After cloning the repo you are going to need to get your [Steam Web API key](https://partner.steamgames.com/doc/webapi_overview/auth) and create a file called `APIKEYS.txt` and place it into the main directory.
 
