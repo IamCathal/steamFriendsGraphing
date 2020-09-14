@@ -14,7 +14,6 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -175,17 +174,33 @@ func CacheFileExist(steamID string) bool {
 // GetUsernameFromCacheFile gets the username for a given cache file
 // e.g 76561198063271448 -> moose
 func GetUsernameFromCacheFile(steamID string) (string, error) {
+	var temp FriendsStruct
+	cacheFolder := "userData"
+	if exists := IsEnvVarSet("testing"); exists {
+		cacheFolder = "testData"
+	}
+
 	if exists := CacheFileExist(steamID); exists {
-		content, err := ioutil.ReadFile(fmt.Sprintf("../userData/%s.json", steamID))
+		file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
+		defer file.Close()
 		if err != nil {
 			return "", err
 		}
-		// Lazy way of doing this but it works
-		arr := strings.Split(string(content), "\"")
-		return arr[3], nil
+
+		gz, _ := gzip.NewReader(file)
+		defer gz.Close()
+
+		scanner := bufio.NewScanner(gz)
+		res := ""
+		for scanner.Scan() {
+			res += scanner.Text()
+		}
+
+		_ = json.Unmarshal([]byte(res), &temp)
+		return temp.Username, nil
 	}
 
-	return "", fmt.Errorf("Cache file %s.json does not exist", steamID)
+	return "", fmt.Errorf("Cache file %s.gz does not exist", steamID)
 }
 
 // GetCache gets a user's cached records if it exists
@@ -197,7 +212,6 @@ func GetCache(steamID string) (FriendsStruct, error) {
 	}
 
 	if exists := CacheFileExist(steamID); exists {
-		// content, _ := ioutil.ReadFile(fmt.Sprintf("../%s/%s.json", cacheFolder, steamID))
 		file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
 		defer file.Close()
 		if err != nil {
