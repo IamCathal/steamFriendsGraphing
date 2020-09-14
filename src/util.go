@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -83,10 +84,11 @@ func PrintUserDetails(apiKey, steamID string) error {
 		return fmt.Errorf("invalid steamID %s given", steamID)
 	}
 
-	fmt.Printf("SteamID: %s\n", userStatsObj.Response.Players[0].Steamid)
-	fmt.Printf("Username: %s\n", userStatsObj.Response.Players[0].Personaname)
-	fmt.Printf("Profile URL: %s\n", userStatsObj.Response.Players[0].Profileurl)
-	fmt.Printf("Time Created: %s\n", time.Unix(int64(userStatsObj.Response.Players[0].Timecreated), 0))
+	fmt.Printf("\nSteamID:\t%s\n", userStatsObj.Response.Players[0].Steamid)
+	fmt.Printf("Username:\t%s\n", userStatsObj.Response.Players[0].Personaname)
+	fmt.Printf("Time Created:\t%s\n", time.Unix(int64(userStatsObj.Response.Players[0].Timecreated), 0))
+	fmt.Printf("Profile URL:\t%s\n", userStatsObj.Response.Players[0].Profileurl)
+	fmt.Printf("Avatar URL:\t%s\n\n", userStatsObj.Response.Players[0].Avatarfull)
 	return nil
 }
 
@@ -163,7 +165,7 @@ func CacheFileExist(steamID string) bool {
 		cacheFolder = "testData"
 	}
 
-	_, err := os.Stat(fmt.Sprintf("../%s/%s.json", cacheFolder, steamID))
+	_, err := os.Stat(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
 	if os.IsNotExist(err) {
 		return false
 	}
@@ -195,14 +197,30 @@ func GetCache(steamID string) (FriendsStruct, error) {
 	}
 
 	if exists := CacheFileExist(steamID); exists {
-		content, _ := ioutil.ReadFile(fmt.Sprintf("../%s/%s.json", cacheFolder, steamID))
-		_ = json.Unmarshal(content, &temp)
+		// content, _ := ioutil.ReadFile(fmt.Sprintf("../%s/%s.json", cacheFolder, steamID))
+		file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
+		defer file.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		gz, _ := gzip.NewReader(file)
+		defer gz.Close()
+
+		scanner := bufio.NewScanner(gz)
+		res := ""
+		for scanner.Scan() {
+			res += scanner.Text()
+		}
+
+		_ = json.Unmarshal([]byte(res), &temp)
 		return temp, nil
 	}
 
-	return temp, fmt.Errorf("Cache file %s.json does not exist", steamID)
+	return temp, fmt.Errorf("Cache file %s.gz does not exist", steamID)
 }
 
+// CheckAPIKeys checks if the API keys in APIKEYS.txt are all valid
 func CheckAPIKeys(apiKeys []string) {
 	for i, apiKey := range apiKeys {
 		targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
@@ -271,15 +289,17 @@ func WriteToFile(apiKey, steamID string, friends FriendsStruct) {
 	}
 
 	if existing := CacheFileExist(steamID); !existing {
-		fileLoc := fmt.Sprintf("../%s/%s.json", cacheFolder, steamID)
-		file, err := os.Create(fileLoc)
+		file, err := os.Create(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
 		CheckErr(err)
 		defer file.Close()
 
 		jsonObj, err := json.Marshal(friends)
 		CheckErr(err)
 
-		_ = ioutil.WriteFile(fileLoc, jsonObj, 0644)
+		w := gzip.NewWriter(file)
+		w.Write([]byte(jsonObj))
+		w.Close()
+
 	}
 
 }

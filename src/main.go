@@ -279,7 +279,9 @@ func newControlFunc(apiKeys []string, steamID string, levelCap, workerAmount int
 	}
 
 	workConfig.wg.Wait()
-	fmt.Printf("\n=============== Done ================\nTotal friends: %d\nCrawled friends: %d\nFriends per level: %+v\n=====================================\n", totalFriends, reachableFriends, friendsPerLevel)
+	fmt.Printf("\n=============== Done ================\n")
+	fmt.Printf("Total friends: %d\nCrawled friends: %d\n", totalFriends, reachableFriends)
+	fmt.Printf("Friends per level: %+v\n=====================================\n", friendsPerLevel)
 	close(jobs)
 	close(results)
 
