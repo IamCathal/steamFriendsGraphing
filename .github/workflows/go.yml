@@ -22,22 +22,14 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
-    - name: Get dependencies
-      run: |
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
-
     - name: Format 
       run: cd src && go fmt ./...
         
     - name: Build
-      run: go build -v ./...
+      run: cd src && go build -v ./...
 
     - name: Test
-      run: go test -v ./...
+      run: cd src && go test -v ./...
       env:
         APIKEY: ${{ secrets.APIKEY }}
         APIKEY1: ${{ secrets.APIKEY1 }}
