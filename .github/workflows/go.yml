@@ -31,13 +31,13 @@ jobs:
         fi
 
     - name: Format 
-      run: go fmt ./src/main.go ./src/util.go
+      run: cd src && go fmt ./...
         
     - name: Build
-      run: go build -o ./src/main -v ./src
+      run: go build -v ./...
 
     - name: Test
-      run: go test -v ./src
+      run: go test -v ./...
       env:
         APIKEY: ${{ secrets.APIKEY }}
         APIKEY1: ${{ secrets.APIKEY1 }}

@@ -9,7 +9,7 @@
   </a>
 </p>
 
-![example workflow name](https://github.com/IamCathal/steamFriendsGraphing/workflows/Go/badge.svg) ![coverage badge](coverage_badge.png)
+![example workflow name](https://github.com/IamCathal/steamFriendsGraphing/workflows/Go/badge.svg) ![coverage badge](src/coverage_badge.png)
 
 ## What's the goal of this project? 
 The goal of this project is to determine the degrees of seperation between any two users on [Steam](https://store.steampowered.com/)
@@ -45,9 +45,13 @@ A worker pool allows the application to place jobs into a pool where workers can
 Graphing functionality is in the pipeline.
 
 ## Installation
-After cloning the repo you are going to need to get your [Steam Web API key](https://partner.steamgames.com/doc/webapi_overview/auth) and create a file called `APIKEYS.txt` and place it into the main directory.
+After cloning the repo you are going to need to get your [Steam Web API key](https://partner.steamgames.com/doc/webapi_overview/auth) and create a file called `APIKEYS.txt` and place it into the root directory.
 
-Now you can run the script either by building and then running it like `./main [arguments] [steam64ID]` or by running it with the command `go run main.go util.go worker.go [arguments] [steam64ID]`. To see all available arguments you can use `./main --help`
+
+Now you can run the script. The easiest way is to build and then run the executable like so:
+``cd src && go build`` and then `` ./steamFriendsGraphing [flags] [steamID]``. Don't forget to use `--help` to see all options.
+
+*Keep in mind that for now the executable can only be invoked from the `src` directory*
 
 For the moment the easiest way to find your steam64ID is to use [Steam ID Finder](https://steamidfinder.com/)
 
@@ -59,4 +63,9 @@ I'm using Jordan Pole's [gopherbadger](https://github.com/jpoles1/gopherbadger) 
 echo "Testing and generating coverage badge, this might take a few seconds"
 badge -png=true
 git add coverage_badge.png
+```
+
+For personal testing I use this command. It runs the tests for all the packages and automatically opens a chrome tab with the coverage report. I leave out the main package since it skews the end result due to not being able to unit test the main function which leaves the package with only 40% coverage.
+```
+go test `go list ./... | grep -v main` -cover -coverprofile=coverage.out && go tool cover -html=coverage.out -o     coverage.html && google-chrome coverage.html
 ```
