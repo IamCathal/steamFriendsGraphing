@@ -177,15 +177,17 @@ func IsEnvVarSet(envvar string) bool {
 // API keys must be stored in APIKEY(s).txt
 func GetAPIKeys() ([]string, error) {
 	// APIKEYS.txt MUST be in the root directory of the project
-	APIKeysLocation := "APIKEYS.txt"
+	APIKeysLocation := "../APIKEYS.txt"
 	// Dirty fix for now. If testing then go test is invoked in the ./src
-	// directory and the path relative to there must be changed
-	if exists := IsEnvVarSet("testing"); exists {
-		APIKeysLocation = fmt.Sprintf("../../%s", APIKeysLocation)
-	}
+	// directory and we should look in the parents parent directory for APIKEYS.txt
 	file, err := os.Open(APIKeysLocation)
 	if err != nil {
-		CheckErr(errors.New("No APIKEYS.txt file found"))
+		// Check again in the parent's parent directory if invoked in /src
+		file, err = os.Open(fmt.Sprintf("../%s", APIKeysLocation))
+		if err != nil {
+			CheckErr(errors.New("No APIKEYS.txt file found"))
+		}
+
 	}
 	defer file.Close()
 
