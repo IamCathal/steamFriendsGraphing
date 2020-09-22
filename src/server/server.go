@@ -114,7 +114,7 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 
 	res := BasicResponse{
 		Status: http.StatusOK,
-		Body:   fmt.Sprintf("Crawling %s with config %s", vars["username"], configText),
+		Body:   fmt.Sprintf("Crawling with config %s", configText),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -126,7 +126,7 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler).Methods("GET")
-	r.HandleFunc("/crawl/{username}", crawl).Methods("POST")
+	r.HandleFunc("/crawl", crawl).Methods("POST")
 	r.Use(CrawlMiddleware)
 
 	log.Println("Starting web server on http://localhost:8080")
