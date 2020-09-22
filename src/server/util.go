@@ -1,4 +1,10 @@
-package main
+package server
+
+import "fmt"
+
+func Yuppa() {
+	fmt.Println("ok")
+}
 
 // // Log an API call to the console with it's details
 // func LogCall(method, endpoint, status, startTimeString string, cached bool) {

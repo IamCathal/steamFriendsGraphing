@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/steamFriendsGraphing/server"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/steamFriendsGraphing/worker"
 )
@@ -26,9 +27,12 @@ func (cfg config) InitCrawling() {
 	}
 
 	if cfg.statMode {
-		err := util.PrintUserDetails(cfg.APIKeys[0], cfg.steamID)
+		resMap, err := util.GetUserDetails(cfg.APIKeys[0], cfg.steamID)
 		if err != nil {
 			log.Fatal(err)
+		}
+		for k, v := range resMap {
+			fmt.Printf("%13s: %s\n", k, v)
 		}
 		return
 	}
@@ -44,8 +48,13 @@ func main() {
 	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
 	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
 	workers := flag.Int("workers", 2, "Amount of workers that are crawling")
+	httpserver := flag.Bool("httpserver", false, "Run the application as a HTTP server")
 	flag.Parse()
 
+	if *httpserver {
+		server.RunServer()
+		return
+	}
 	apiKeys, err := util.GetAPIKeys()
 	util.CheckErr(err)
 

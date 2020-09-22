@@ -49,25 +49,28 @@ func TestAllAPIKeys(t *testing.T) {
 	CheckAPIKeys(apiKeys)
 }
 
-func TestInvalidPrintUserDetails(t *testing.T) {
+func TestInvalidGetUserDetails(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
 	steamID := "bad input"
 
-	err := PrintUserDetails(apiKeys[0], steamID)
+	_, err := GetUserDetails(apiKeys[0], steamID)
 	if err == nil {
 		t.Error(err)
 	}
 }
 
-func TestPrintUserDetails(t *testing.T) {
+func TestGetUserDetails(t *testing.T) {
 	apiKeys := getAPIKeysForTesting()
 	steamID := "76561197960287930"
 
 	fmt.Println("")
 	fmt.Printf("==================== Print user details ====================\n")
-	err := PrintUserDetails(apiKeys[0], steamID)
+	resMap, err := GetUserDetails(apiKeys[0], steamID)
 	if err != nil {
 		t.Error(err)
+	}
+	for k, v := range resMap {
+		fmt.Printf("%13s: %s\n", k, v)
 	}
 	fmt.Printf("============================================================\n\n")
 }

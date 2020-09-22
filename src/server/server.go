@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/steamFriendsGraphing/util"
 )
 
 type BasicResponse struct {
@@ -104,10 +105,28 @@ func HomeHandler(w http.ResponseWriter, req *http.Request) {
 	LogCall(req.Method, req.URL.Path, "200", vars["startTime"], false)
 }
 
+func statLookup(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	apiKeys, err := util.GetAPIKeys()
+	util.CheckErr(err)
+
+	resultMap, err := util.GetUserDetails(apiKeys[0], vars["steamID"])
+	util.CheckErr(err)
+
+	res := BasicResponse{
+		Status: http.StatusOK,
+		Body:   fmt.Sprintf("%+v", resultMap),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(res)
+	LogCall(req.Method, req.URL.Path, "200", vars["startTime"], false)
+}
+
 func crawl(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	vars["startTime"] = strconv.FormatInt(startTime, 10)
 
 	configText := fmt.Sprintf("Level: %s - StatMode: %s - TestKeys: %s - Workers: %s - SteamID: %s",
 		vars["level"], vars["statmode"], vars["testkeys"], vars["workers"], vars["steamID"])
@@ -123,10 +142,11 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 	LogCall(req.Method, req.URL.Path, "200", vars["startTime"], false)
 }
 
-func main() {
+func RunServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler).Methods("GET")
 	r.HandleFunc("/crawl", crawl).Methods("POST")
+	r.HandleFunc("/statlookup", statLookup).Methods("POST")
 	r.Use(CrawlMiddleware)
 
 	log.Println("Starting web server on http://localhost:8080")

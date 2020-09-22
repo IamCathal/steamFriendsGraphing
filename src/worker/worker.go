@@ -180,7 +180,7 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util
 		}
 		steamIDsList += ""
 
-		targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamIDsList)
+		targetURL = fmt.Sprintf("http://api.steampowered.com/I SteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamIDsList)
 		res, err = http.Get(targetURL)
 		util.CheckErr(err)
 		body, err = ioutil.ReadAll(res.Body)

@@ -51,35 +51,35 @@ func GetUsername(apiKey, steamID string) (string, error) {
 	return userStatsObj.Response.Players[0].Personaname, nil
 }
 
-// PrintUserDetails is used to print a target users details without crawling
-// their friends list
-func PrintUserDetails(apiKey, steamID string) error {
+func GetUserDetails(apiKey, steamID string) (map[string]string, error) {
 	// Get the target username from the ID
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
 		apiKey, steamID)
 	res, err := http.Get(targetURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	body, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var userStatsObj UserStatsStruct
 	json.Unmarshal(body, &userStatsObj)
 
 	if len(userStatsObj.Response.Players) == 0 {
-		return fmt.Errorf("invalid steamID %s given", steamID)
+		return nil, fmt.Errorf("invalid steamID %s given", steamID)
 	}
 
-	fmt.Printf("\nSteamID:\t%s\n", userStatsObj.Response.Players[0].Steamid)
-	fmt.Printf("Username:\t%s\n", userStatsObj.Response.Players[0].Personaname)
-	fmt.Printf("Time Created:\t%s\n", time.Unix(int64(userStatsObj.Response.Players[0].Timecreated), 0))
-	fmt.Printf("Profile URL:\t%s\n", userStatsObj.Response.Players[0].Profileurl)
-	fmt.Printf("Avatar URL:\t%s\n\n", userStatsObj.Response.Players[0].Avatarfull)
-	return nil
+	resMap := make(map[string]string)
+	resMap["SteamID"] = userStatsObj.Response.Players[0].Steamid
+	resMap["Username"] = userStatsObj.Response.Players[0].Personaname
+	resMap["TimeCreated"] = fmt.Sprintf("%s", time.Unix(int64(userStatsObj.Response.Players[0].Timecreated), 0))
+	resMap["ProfileURL"] = userStatsObj.Response.Players[0].Profileurl
+	resMap["AvatarURL"] = userStatsObj.Response.Players[0].Avatarfull
+
+	return resMap, nil
 }
 
 // CreateUserDataFolder creates a folder for holding cache.
