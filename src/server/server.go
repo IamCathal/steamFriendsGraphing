@@ -16,6 +16,51 @@ type BasicResponse struct {
 	Body   string `json:"body"`
 }
 
+type config struct {
+	Level    string `json:"level"`
+	StatMode string `json:"statMode"`
+	TestKeys string `json:"testKeys"`
+	Workers  string `json:"workers"`
+	SteamID  string `json:"steamID"`
+}
+
+func DecodeBody(r *http.Request, vars map[string]string) (config, error) {
+	inputConfig := config{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&inputConfig)
+	if err != nil {
+		return inputConfig, err
+	}
+	vars["level"] = inputConfig.Level
+	vars["statMode"] = inputConfig.StatMode
+	vars["testKeys"] = inputConfig.TestKeys
+	vars["workers"] = inputConfig.Workers
+	vars["steamID"] = inputConfig.SteamID
+	return inputConfig, nil
+}
+
+func CrawlMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+
+		startTime := time.Now().UnixNano() / int64(time.Millisecond)
+		vars["startTime"] = strconv.FormatInt(startTime, 10)
+
+		// Don't bother with middleware checks if it's the root endpoint
+		if r.URL.Path == "/" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		_, err := DecodeBody(r, vars)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 // Log an API call to the console with it's details
 func LogCall(method, endpoint, status, startTimeString string, cached bool) {
 	statusColor := "\033[0m"
@@ -64,9 +109,12 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	vars["startTime"] = strconv.FormatInt(startTime, 10)
 
+	configText := fmt.Sprintf("Level: %s - StatMode: %s - TestKeys: %s - Workers: %s - SteamID: %s",
+		vars["level"], vars["statmode"], vars["testkeys"], vars["workers"], vars["steamID"])
+
 	res := BasicResponse{
 		Status: http.StatusOK,
-		Body:   fmt.Sprintf("Crawling %s", vars["username"]),
+		Body:   fmt.Sprintf("Crawling %s with config %s", vars["username"], configText),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -79,6 +127,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler).Methods("GET")
 	r.HandleFunc("/crawl/{username}", crawl).Methods("POST")
+	r.Use(CrawlMiddleware)
 
 	log.Println("Starting web server on http://localhost:8080")
 	http.ListenAndServe(":8080", r)
