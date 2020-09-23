@@ -180,6 +180,10 @@ func GetAPIKeys() ([]string, error) {
 	APIKeysLocation := "../APIKEYS.txt"
 	// Dirty fix for now. If testing then go test is invoked in the ./src
 	// directory and we should look in the parents parent directory for APIKEYS.txt
+	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
+		return []string{os.Getenv("APIKEY"), os.Getenv("APIKEY1")}, nil
+	}
+
 	file, err := os.Open(APIKeysLocation)
 	if err != nil {
 		// Check again in the parent's parent directory if invoked in /src
