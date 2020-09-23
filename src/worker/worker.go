@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/steamFriendsGraphing/graphing"
 	"github.com/steamFriendsGraphing/util"
 )
 
@@ -101,6 +102,8 @@ func InitCrawling(cfg CrawlerConfig) {
 		return
 	}
 	ControlFunc(cfg.APIKeys, cfg.SteamID, cfg.Level, cfg.Workers)
+
+	graphing.InitGraphing(cfg.Level, cfg.SteamID)
 }
 
 func Worker(jobs <-chan JobsStruct, results chan<- JobsStruct, cfg *WorkerConfig, activeJobs *int64) {
