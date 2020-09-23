@@ -17,7 +17,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/steamFriendsGraphing/graphing"
 	"github.com/steamFriendsGraphing/util"
 )
 
@@ -95,25 +94,26 @@ func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
 
 // InitCrawling initialises the crawling and then starts up the graph crawler
 // that produces the HTML output
-func InitCrawling(cfg CrawlerConfig) {
+func InitCrawling(cfg CrawlerConfig) (CrawlerConfig, error) {
+	temp := CrawlerConfig{}
 	if cfg.TestKeys == true {
 		util.CheckAPIKeys(cfg.APIKeys)
-		return
+		return temp, nil
 	}
 
 	if cfg.StatMode {
 		resMap, err := util.GetUserDetails(cfg.APIKeys[0], cfg.SteamID)
 		if err != nil {
-			log.Fatal(err)
+			return temp, err
 		}
 		for k, v := range resMap {
 			fmt.Printf("%13s: %s\n", k, v)
 		}
-		return
+		return temp, nil
 	}
-	ControlFunc(cfg.APIKeys, cfg.SteamID, cfg.Level, cfg.Workers)
 
-	graphing.InitGraphing(cfg.Level, cfg.Workers, cfg.SteamID)
+	ControlFunc(cfg.APIKeys, cfg.SteamID, cfg.Level, cfg.Workers)
+	return cfg, nil
 }
 
 // Worker is the crawling worker queue implementation. It takes in users off the jobs queue, processes

@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
+	"github.com/steamFriendsGraphing/graphing"
 	"github.com/steamFriendsGraphing/server"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/steamFriendsGraphing/worker"
@@ -36,7 +38,11 @@ func main() {
 	}
 
 	if len(os.Args) > 1 {
-		worker.InitCrawling(config)
+		cfg, err := worker.InitCrawling(config)
+		if err != nil {
+			log.Fatal(err)
+		}
+		graphing.InitGraphing(cfg.Level, cfg.Workers, cfg.SteamID)
 	} else {
 		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
 	}
