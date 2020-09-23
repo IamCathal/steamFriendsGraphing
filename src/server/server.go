@@ -79,7 +79,7 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 
 	res := BasicResponse{
 		Status: http.StatusOK,
-		Body:   fmt.Sprintf("Crawling with config %s", configText),
+		Body:   fmt.Sprintf("Crawling with config %s. Your finished graph will be saved under %s.html", configText, vars["steamID"]),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
