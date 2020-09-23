@@ -21,12 +21,16 @@ import (
 	"github.com/steamFriendsGraphing/util"
 )
 
+// JobsStruct is the strcuture used for placing jobs onto the
+// worker queue
 type JobsStruct struct {
 	Level   int
 	SteamID string
 	APIKey  string
 }
 
+// WorkerConfig holds most of the configuration needed
+// to start the worker (apart from jobs and result channels)
 type WorkerConfig struct {
 	JobsMutex       *sync.Mutex
 	ResMutex        *sync.Mutex
@@ -38,6 +42,8 @@ type WorkerConfig struct {
 	WorkerAmount    int
 }
 
+// CrawlerConfig holdes all of the configuration needed to
+// start the crawler
 type CrawlerConfig struct {
 	Level    int
 	StatMode bool
@@ -47,6 +53,8 @@ type CrawlerConfig struct {
 	APIKeys  []string
 }
 
+// InitWorkerConfig initialised the worker based on the levle and worker amount given
+// and returns a WorkerConfig with all fields set
 func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
 
 	if levelCap < 1 || levelCap > 4 {
@@ -85,6 +93,8 @@ func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
 	return workConfig, nil
 }
 
+// InitCrawling initialises the crawling and then starts up the graph crawler
+// that produces the HTML output
 func InitCrawling(cfg CrawlerConfig) {
 	if cfg.TestKeys == true {
 		util.CheckAPIKeys(cfg.APIKeys)
@@ -106,6 +116,8 @@ func InitCrawling(cfg CrawlerConfig) {
 	graphing.InitGraphing(cfg.Level, cfg.Workers, cfg.SteamID)
 }
 
+// Worker is the crawling worker queue implementation. It takes in users off the jobs queue, processes
+//  them and places and then places user's friends onto the results queue
 func Worker(jobs <-chan JobsStruct, results chan<- JobsStruct, cfg *WorkerConfig, activeJobs *int64) {
 	for {
 		cfg.JobsMutex.Lock()
@@ -152,7 +164,7 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 
 	// If the cache exists and the env var to disable serving from cache is not set
-	if exists := CacheFileExist(steamID); exists {
+	if exists := CacheFileExists(steamID); exists {
 		if exists := IsEnvVarSet("disablereadcache"); !exists {
 			friendsObj, err := GetCache(steamID)
 			if err != nil {
@@ -294,6 +306,8 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util
 	return friendsObj, nil
 }
 
+// ControlFunc is the parent function of Worker. It adds the target user to the jobs queue and then processes the
+// results queue until all users below the target level have been crawled
 func ControlFunc(apiKeys []string, steamID string, levelCap, workerAmount int) {
 	workConfig, err := InitWorkerConfig(levelCap, workerAmount)
 	if err != nil {
@@ -304,7 +318,7 @@ func ControlFunc(apiKeys []string, steamID string, levelCap, workerAmount int) {
 	// Therefore some rapid scaling is needed
 	// Level 2: 8100 buffer length
 	// Level 3: 729000 buffer length
-	// Level 4: 6.561e+07 buffer length (This is not feasable to crawl)
+	// Level 4: 6.561e+07 buffer length (This is not feasible to crawl)
 	chanLen := 0
 	if levelCap <= 2 {
 		chanLen = 700
@@ -391,7 +405,7 @@ func WriteToFile(apiKey, steamID string, friends util.FriendsStruct) {
 		cacheFolder = "testData"
 	}
 
-	if existing := CacheFileExist(steamID); !existing {
+	if existing := CacheFileExists(steamID); !existing {
 		file, err := os.Create(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
 		util.CheckErr(err)
 		defer file.Close()
@@ -413,7 +427,7 @@ func GetCache(steamID string) (util.FriendsStruct, error) {
 		cacheFolder = "testData"
 	}
 
-	if exists := CacheFileExist(steamID); exists {
+	if exists := CacheFileExists(steamID); exists {
 		file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
 		defer file.Close()
 		if err != nil {
@@ -445,7 +459,7 @@ func GetUsernameFromCacheFile(steamID string) (string, error) {
 		cacheFolder = "testData"
 	}
 
-	if exists := CacheFileExist(steamID); exists {
+	if exists := CacheFileExists(steamID); exists {
 		file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
 		defer file.Close()
 		if err != nil {
@@ -468,6 +482,8 @@ func GetUsernameFromCacheFile(steamID string) (string, error) {
 	return "", fmt.Errorf("Cache file %s.gz does not exist", steamID)
 }
 
+// IsEnvVarSet does a simple check to see if an environment
+// variable is set
 func IsEnvVarSet(envvar string) bool {
 	if _, exists := os.LookupEnv(envvar); exists {
 		return true
@@ -476,7 +492,7 @@ func IsEnvVarSet(envvar string) bool {
 }
 
 // CacheFileExists checks whether a given cached file exists
-func CacheFileExist(steamID string) bool {
+func CacheFileExists(steamID string) bool {
 	cacheFolder := "userData"
 	if exists := IsEnvVarSet("testing"); exists {
 		cacheFolder = "testData"

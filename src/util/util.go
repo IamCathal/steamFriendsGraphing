@@ -17,8 +17,11 @@ import (
 
 var (
 	Green = "\033[32m"
-	Red   = "\033[31m"
+	// Green color text for terminal printing
+	Red = "\033[31m"
+	// Red color text for terminal printing
 	White = "\033[0;37m"
+	// White color text for terminal printing
 )
 
 // GetUsername gets a username from a given steamID
