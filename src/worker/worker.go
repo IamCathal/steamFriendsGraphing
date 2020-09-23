@@ -37,6 +37,15 @@ type WorkerConfig struct {
 	WorkerAmount    int
 }
 
+type CrawlerConfig struct {
+	Level    int
+	StatMode bool
+	TestKeys bool
+	Workers  int
+	SteamID  string
+	APIKeys  []string
+}
+
 func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
 
 	if levelCap < 1 || levelCap > 4 {
@@ -73,6 +82,25 @@ func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
 	}
 	fmt.Printf("======================================\n")
 	return workConfig, nil
+}
+
+func InitCrawling(cfg CrawlerConfig) {
+	if cfg.TestKeys == true {
+		util.CheckAPIKeys(cfg.APIKeys)
+		return
+	}
+
+	if cfg.StatMode {
+		resMap, err := util.GetUserDetails(cfg.APIKeys[0], cfg.SteamID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for k, v := range resMap {
+			fmt.Printf("%13s: %s\n", k, v)
+		}
+		return
+	}
+	ControlFunc(cfg.APIKeys, cfg.SteamID, cfg.Level, cfg.Workers)
 }
 
 func Worker(jobs <-chan JobsStruct, results chan<- JobsStruct, cfg *WorkerConfig, activeJobs *int64) {

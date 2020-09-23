@@ -154,3 +154,41 @@ func TestExampleInvocation(t *testing.T) {
 	ControlFunc(apiKeys, "76561198130544932", 1, 1)
 	fmt.Printf("============================================================\n")
 }
+
+func TestConfigInit(t *testing.T) {
+	APIKeys := getAPIKeysForTesting()
+	// Regular invocation
+	fmt.Printf("\n\n")
+	testConfig := CrawlerConfig{
+		Level:    1,
+		StatMode: false,
+		TestKeys: false,
+		Workers:  1,
+		SteamID:  "76561198282036055",
+		APIKeys:  APIKeys,
+	}
+	InitCrawling(testConfig)
+	fmt.Printf("\n")
+	// StatMode invocation
+	testConfig2 := CrawlerConfig{
+		Level:    1,
+		StatMode: true,
+		TestKeys: false,
+		Workers:  1,
+		SteamID:  "76561198144084014",
+		APIKeys:  APIKeys,
+	}
+	InitCrawling(testConfig2)
+	fmt.Printf("\n")
+	// testKeys invocation
+	testConfig3 := CrawlerConfig{
+		Level:    1,
+		StatMode: false,
+		TestKeys: true,
+		Workers:  1,
+		SteamID:  "76561198144084014",
+		APIKeys:  APIKeys,
+	}
+	InitCrawling(testConfig3)
+	fmt.Printf("\n\n")
+}

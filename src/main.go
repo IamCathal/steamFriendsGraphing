@@ -3,44 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/steamFriendsGraphing/server"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/steamFriendsGraphing/worker"
 )
-
-type config struct {
-	level    int
-	statMode bool
-	testKeys bool
-	workers  int
-	steamID  string
-	APIKeys  []string
-}
-
-func (cfg config) InitCrawling() {
-	if cfg.testKeys == true {
-		util.CheckAPIKeys(cfg.APIKeys)
-		return
-	}
-
-	if cfg.statMode {
-		resMap, err := util.GetUserDetails(cfg.APIKeys[0], cfg.steamID)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for k, v := range resMap {
-			fmt.Printf("%13s: %s\n", k, v)
-		}
-		return
-	}
-
-	// Last argument should be the steamID
-	worker.ControlFunc(cfg.APIKeys, cfg.steamID, cfg.level, cfg.workers)
-
-}
 
 func main() {
 
@@ -58,17 +26,17 @@ func main() {
 	apiKeys, err := util.GetAPIKeys()
 	util.CheckErr(err)
 
-	config := config{
-		level:    *level,
-		statMode: *statMode,
-		testKeys: *testKeys,
-		workers:  *workers,
-		steamID:  os.Args[len(os.Args)-1],
+	config := worker.CrawlerConfig{
+		Level:    *level,
+		StatMode: *statMode,
+		TestKeys: *testKeys,
+		Workers:  *workers,
+		SteamID:  os.Args[len(os.Args)-1],
 		APIKeys:  apiKeys,
 	}
 
 	if len(os.Args) > 1 {
-		config.InitCrawling()
+		worker.InitCrawling(config)
 	} else {
 		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
 	}
