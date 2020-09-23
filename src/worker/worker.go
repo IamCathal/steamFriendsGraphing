@@ -103,7 +103,7 @@ func InitCrawling(cfg CrawlerConfig) {
 	}
 	ControlFunc(cfg.APIKeys, cfg.SteamID, cfg.Level, cfg.Workers)
 
-	graphing.InitGraphing(cfg.Level, cfg.SteamID)
+	graphing.InitGraphing(cfg.Level, cfg.Workers, cfg.SteamID)
 }
 
 func Worker(jobs <-chan JobsStruct, results chan<- JobsStruct, cfg *WorkerConfig, activeJobs *int64) {

@@ -12,59 +12,6 @@ import (
 	"github.com/go-echarts/go-echarts/charts"
 )
 
-func graphWorker(id int, jobs <-chan infoStruct, results chan<- infoStruct, wConfig *workerConfig, gConfig *graphConfig, wg *sync.WaitGroup, activeJobs *int64, levelCap int) {
-	for {
-		wConfig.jobMutex.Lock()
-		job := <-jobs
-		wConfig.jobMutex.Unlock()
-		rand.Seed(time.Now().UTC().UnixNano())
-
-		if job.level != 0 {
-			friendsObj, err := GetCache(job.steamID)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			friendCount := len(friendsObj.FriendsList.Friends)
-			// fmt.Printf("Got [%d][%s][%s] - %d friends\n", job.level, friendsObj.Username, job.steamID, friendCount)
-
-			// "Find" some friends and push them onto the jobs queue
-			for i := 0; i < friendCount; i++ {
-				tempStruct := infoStruct{
-					level:    job.level + 1,
-					from:     job.username,
-					steamID:  friendsObj.FriendsList.Friends[i].Steamid,
-					username: friendsObj.FriendsList.Friends[i].Username,
-				}
-				// fmt.Printf("\t%+v\n", tempStruct)
-				// fmt.Printf("[%d] %s -> %s\n", tempStruct.level, friendsObj.Username, friendsObj.FriendsList.Friends[i].Username)
-
-				if tempStruct.level <= levelCap {
-					atomic.AddInt64(activeJobs, 1)
-				}
-
-				wConfig.resMutex.Lock()
-				results <- tempStruct
-				wConfig.resMutex.Unlock()
-
-			}
-
-			wConfig.activeJobsMutex.Lock()
-			atomic.AddInt64(activeJobs, -1)
-			wConfig.activeJobsMutex.Unlock()
-			wg.Done()
-		}
-	}
-}
-
-func nodeExists(username string, nodeMap map[string]bool) bool {
-	_, ok := nodeMap[username]
-	if ok {
-		return true
-	}
-	return false
-}
-
 type graphConfig struct {
 	nodes         []charts.GraphNode
 	links         []charts.GraphLink
@@ -80,7 +27,49 @@ type workerConfig struct {
 	activeJobsMutex *sync.Mutex
 }
 
-func CrawlCachedFriends(level int, steamID, username string) {
+// graphWorker is the graphing worker queue implementation. It's quite similar to
+// the crawling worker in the worker module but this is purely for graphing
+func graphWorker(id int, jobs <-chan infoStruct, results chan<- infoStruct, wConfig *workerConfig, gConfig *graphConfig, wg *sync.WaitGroup, activeJobs *int64, levelCap int) {
+	for {
+		wConfig.jobMutex.Lock()
+		job := <-jobs
+		wConfig.jobMutex.Unlock()
+		rand.Seed(time.Now().UTC().UnixNano())
+
+		if job.level != 0 {
+			friendsObj, err := GetCache(job.steamID)
+			CheckErr(err)
+
+			friendCount := len(friendsObj.FriendsList.Friends)
+
+			// Iterate through the user's friendlist and add them onto the
+			// results channel for future processing. Important to link
+			// the current user and this friend so a link can be made later
+			for i := 0; i < friendCount; i++ {
+				tempStruct := infoStruct{
+					level:    job.level + 1,
+					from:     job.username,
+					steamID:  friendsObj.FriendsList.Friends[i].Steamid,
+					username: friendsObj.FriendsList.Friends[i].Username,
+				}
+
+				if tempStruct.level <= levelCap {
+					atomic.AddInt64(activeJobs, 1)
+				}
+
+				wConfig.resMutex.Lock()
+				results <- tempStruct
+				wConfig.resMutex.Unlock()
+			}
+			wConfig.activeJobsMutex.Lock()
+			atomic.AddInt64(activeJobs, -1)
+			wConfig.activeJobsMutex.Unlock()
+			wg.Done()
+		}
+	}
+}
+
+func CrawlCachedFriends(level, workers int, steamID, username string) {
 
 	jobs := make(chan infoStruct, 500000)
 	results := make(chan infoStruct, 500000)
@@ -115,7 +104,7 @@ func CrawlCachedFriends(level int, steamID, username string) {
 	levelCap := level
 	friendsPerLevel := make(map[int]int)
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < workers*2; i++ {
 		go graphWorker(i, jobs, results, &wConfig, &gConfig, &wg, &activeJobs, levelCap)
 	}
 
@@ -144,15 +133,13 @@ func CrawlCachedFriends(level int, steamID, username string) {
 			break
 		}
 		result := <-results
-		// fmt.Printf("\t\t%+v\n", result)
-		// fmt.Printf("[%d] Got [SteamID %d][Level %d]\n", activeJobs, result.steamID, result.level)
 		totalFriends++
 		friendsPerLevel[result.level]++
 
 		if result.level <= levelCap {
 			reachableFriends++
 
-			if exists := nodeExists(result.username, existingNodes); !exists {
+			if exists := NodeExists(result.username, existingNodes); !exists {
 				gConfig.existingNodes[result.username] = true
 				gConfig.nodes = append(gConfig.nodes, charts.GraphNode{Name: result.username})
 			}
@@ -166,61 +153,40 @@ func CrawlCachedFriends(level int, steamID, username string) {
 			}
 			wg.Add(1)
 			if newJob.from == "" {
-				fmt.Printf("BADEEE %+v\n", newJob)
-				panic(1)
+				log.Fatalf("Empty job caught: %+v", newJob)
 			}
-			// fmt.Printf("\t%+v\n", newJob)
 			jobs <- newJob
-		} else {
-			// fmt.Printf("\t%+v\n", result)
 		}
-
-		// if result.level == levelCap {
-		// 	if exists := nodeExists(result.username, existingNodes); !exists {
-		// 		gConfig.nodes = append(gConfig.nodes, charts.GraphNode{Name: result.username})
-		// 	} else {
-		// 		gConfig.nodes = append(gConfig.nodes, charts.GraphNode{Name: result.username})
-
-		// 	}
-		// 	fmt.Printf("[%d] %s[%s] -> %s[%s]\n", result.level, result.from, result.steamID, result.username, result.steamID)
-
-		// }
 
 	}
 
 	wg.Wait()
-
-	// gConfig.links = append(gConfig.links, charts.GraphLink{Source: "disco biscuits", Target: "godanka"})
-
-	fmt.Printf("%d --- %d \n", len(gConfig.nodes), len(gConfig.links))
-	fmt.Printf("\n============== Done ==============\nTotal friends: %d\nCrawled friends: %d\n==================================\n", totalFriends, reachableFriends)
-	fmt.Printf("%+v\n", friendsPerLevel)
+	fmt.Printf("\n============== Done ==============\n")
 	close(jobs)
 	close(results)
 
 	graph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
 		charts.InitOpts{Width: "1800px", Height: "1080px"})
+
 	graph.Add("graph", gConfig.nodes, gConfig.links,
 		charts.GraphOpts{Layout: "force", Roam: true, Force: charts.GraphForce{Repulsion: 34, Gravity: 0.16}, FocusNodeAdjacency: true},
 		charts.EmphasisOpts{Label: charts.LabelTextOpts{Show: true, Position: "left", Color: "black"}},
 		charts.LineStyleOpts{Width: 1, Color: "#b5b5b5"},
 	)
 
-	file, err := os.Create("hello3.html")
-	if err != nil {
-		log.Println(err)
-	}
+	err := CreateFinishedGraphFolder()
+	CheckErr(err)
+	file, err := os.Create(fmt.Sprintf("../finishedGraphs/%s.html", steamID))
+	CheckErr(err)
 
 	graph.Render(file)
 }
 
-func InitGraphing(level int, steamID string) {
+func InitGraphing(level, workers int, steamID string) {
 	fmt.Printf("=============================================\n")
 	fmt.Printf("                GRAPHING\n\n")
 	username, err := GetUsernameFromCacheFile(steamID)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckErr(err)
 
-	CrawlCachedFriends(level, steamID, username)
+	CrawlCachedFriends(level, workers, steamID, username)
 }

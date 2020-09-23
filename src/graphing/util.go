@@ -67,15 +67,6 @@ type infoStruct struct {
 	from     string
 }
 
-type CrawlerConfig struct {
-	Level    int
-	StatMode bool
-	TestKeys bool
-	Workers  int
-	SteamID  string
-	APIKeys  []string
-}
-
 // GetCache gets a user's cached records if it exists
 func GetCache(steamID string) (FriendsStruct, error) {
 	var temp FriendsStruct
@@ -91,17 +82,17 @@ func GetCache(steamID string) (FriendsStruct, error) {
 
 	gz, _ := gzip.NewReader(file)
 	defer gz.Close()
-
 	scanner := bufio.NewScanner(gz)
 	res := ""
 	for scanner.Scan() {
 		res += scanner.Text()
 	}
-
 	_ = json.Unmarshal([]byte(res), &temp)
 	return temp, nil
 }
 
+// IsEnvVarSet does a simple check to see if an environment
+// variable is set
 func IsEnvVarSet(envvar string) bool {
 	if _, exists := os.LookupEnv(envvar); exists {
 		return true
@@ -109,16 +100,14 @@ func IsEnvVarSet(envvar string) bool {
 	return false
 }
 
+// GetUsernameFromCacheFile gets the username for a given cache file
+// e.g 76561198063271448 -> moose
 func GetUsernameFromCacheFile(steamID string) (string, error) {
 	var temp FriendsStruct
 	cacheFolder := "userData"
 	if exists := IsEnvVarSet("testing"); exists {
 		cacheFolder = "testData"
 	}
-	if exists := IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
-	}
-
 	file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
 	defer file.Close()
 	if err != nil {
@@ -127,7 +116,6 @@ func GetUsernameFromCacheFile(steamID string) (string, error) {
 
 	gz, _ := gzip.NewReader(file)
 	defer gz.Close()
-
 	scanner := bufio.NewScanner(gz)
 	res := ""
 	for scanner.Scan() {
@@ -136,5 +124,35 @@ func GetUsernameFromCacheFile(steamID string) (string, error) {
 
 	_ = json.Unmarshal([]byte(res), &temp)
 	return temp.Username, nil
+}
 
+// NodeExists checks if a given node has been added to the graph yet
+func NodeExists(username string, nodeMap map[string]bool) bool {
+	_, ok := nodeMap[username]
+	if ok {
+		return true
+	}
+	return false
+}
+
+// CreateUserDataFolder creates a folder for holding cache.
+// Can either be userData for regular use or testData when running under github actions.
+func CreateFinishedGraphFolder() error {
+
+	_, err := os.Stat("../finishedGraphs")
+	if os.IsNotExist(err) {
+		os.Mkdir("../finishedGraphs", 0755)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CheckErr is a simple function to replace dozen or so if err != nil statements
+func CheckErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
