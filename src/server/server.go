@@ -88,13 +88,13 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 	LogCall(req.Method, req.URL.Path, "200", vars["startTime"], false)
 }
 
-func RunServer() {
+func RunServer(port string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler).Methods("GET")
 	r.HandleFunc("/crawl", crawl).Methods("POST")
 	r.HandleFunc("/statlookup", statLookup).Methods("POST")
 	r.Use(CrawlMiddleware)
 
-	log.Println("Starting web server on http://localhost:8080")
-	http.ListenAndServe(":8080", r)
+	log.Printf("Starting web server on http://localhost:%s\n", port)
+	http.ListenAndServe(fmt.Sprintf(":%s", port), r)
 }

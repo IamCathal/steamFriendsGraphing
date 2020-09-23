@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	if *httpserver {
-		server.RunServer()
+		server.RunServer("8080")
 		return
 	}
 	apiKeys, err := util.GetAPIKeys()

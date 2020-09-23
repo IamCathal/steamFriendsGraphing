@@ -3,10 +3,13 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -95,4 +98,15 @@ func TestCrawl(t *testing.T) {
 	if resJSON.Status != 200 {
 		t.Errorf("Crawl endpoint not operational")
 	}
+}
+
+func TestServerRun(t *testing.T) {
+	// There must be a better way to do this
+	// but it'll work for now and it doesn't
+	// mess anything else up
+	fmt.Printf("\n\n")
+	go RunServer("8085")
+	time.Sleep(2 * time.Second)
+	fmt.Printf("\n\n")
+	os.Exit(0)
 }
