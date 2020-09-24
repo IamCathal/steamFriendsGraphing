@@ -34,23 +34,23 @@ jobs:
         GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
 
     - name: Test Server
-        run: cd src && go test -v github.com/steamFriendsGraphing/server
-        env:
-          APIKEY: ${{ secrets.APIKEY }}
-          APIKEY1: ${{ secrets.APIKEY1 }}
-          GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
+      run: cd src && go test -v github.com/steamFriendsGraphing/server
+      env:
+        APIKEY: ${{ secrets.APIKEY }}
+        APIKEY1: ${{ secrets.APIKEY1 }}
+        GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
 
     - name: Test Worker
-          run: cd src && go test -v github.com/steamFriendsGraphing/worker
-          env:
-            APIKEY: ${{ secrets.APIKEY }}
-            APIKEY1: ${{ secrets.APIKEY1 }}
-            GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
+      run: cd src && go test -v github.com/steamFriendsGraphing/worker
+      env:
+        APIKEY: ${{ secrets.APIKEY }}
+        APIKEY1: ${{ secrets.APIKEY1 }}
+        GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
 
     - name: Test Worker
-          run: cd src && go test -v github.com/steamFriendsGraphing/util
-          env:
-            APIKEY: ${{ secrets.APIKEY }}
-            APIKEY1: ${{ secrets.APIKEY1 }}
-            GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
+      run: cd src && go test -v github.com/steamFriendsGraphing/util
+      env:
+        APIKEY: ${{ secrets.APIKEY }}
+        APIKEY1: ${{ secrets.APIKEY1 }}
+        GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
 
