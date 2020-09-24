@@ -26,10 +26,31 @@ jobs:
     - name: Build
       run: cd src && go build -v ./...
 
-    - name: Test
-      run: cd src && go test -v ./...
+    - name: Test Graphing
+      run: cd src && go test -v github.com/steamFriendsGraphing/graphing
       env:
         APIKEY: ${{ secrets.APIKEY }}
         APIKEY1: ${{ secrets.APIKEY1 }}
         GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
+
+    - name: Test Server
+        run: cd src && go test -v github.com/steamFriendsGraphing/server
+        env:
+          APIKEY: ${{ secrets.APIKEY }}
+          APIKEY1: ${{ secrets.APIKEY1 }}
+          GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
+
+    - name: Test Worker
+          run: cd src && go test -v github.com/steamFriendsGraphing/worker
+          env:
+            APIKEY: ${{ secrets.APIKEY }}
+            APIKEY1: ${{ secrets.APIKEY1 }}
+            GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
+
+    - name: Test Worker
+          run: cd src && go test -v github.com/steamFriendsGraphing/util
+          env:
+            APIKEY: ${{ secrets.APIKEY }}
+            APIKEY1: ${{ secrets.APIKEY1 }}
+            GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
 
