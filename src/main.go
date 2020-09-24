@@ -28,21 +28,30 @@ func main() {
 	apiKeys, err := util.GetAPIKeys()
 	util.CheckErr(err)
 
+	steamIDs, err := util.ExtractSteamIDs(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
 	config := worker.CrawlerConfig{
 		Level:    *level,
 		StatMode: *statMode,
 		TestKeys: *testKeys,
 		Workers:  *workers,
-		SteamID:  os.Args[len(os.Args)-1],
 		APIKeys:  apiKeys,
 	}
 
 	if len(os.Args) > 1 {
-		cfg, err := worker.InitCrawling(config)
-		if err != nil {
-			log.Fatal(err)
+		for _, steamID := range steamIDs {
+			cfg, err := worker.InitCrawling(config, steamID)
+			if err != nil {
+				log.Fatal(err)
+			}
+			// Level -1 is passed back when statMode is invoked
+			if cfg.Level != -1 {
+				graphing.InitGraphing(cfg.Level, cfg.Workers, steamID)
+			}
+			fmt.Printf("\n")
 		}
-		graphing.InitGraphing(cfg.Level, cfg.Workers, cfg.SteamID)
 	} else {
 		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
 	}

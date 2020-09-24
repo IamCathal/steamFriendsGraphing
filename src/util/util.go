@@ -215,3 +215,16 @@ func GetAPIKeys() ([]string, error) {
 	// APIKeys.txt does exist but it is empty
 	return nil, errors.New("No API key(s)")
 }
+
+func ExtractSteamIDs(args []string) ([]string, error) {
+	validSteamIDs := []string{}
+	for _, arg := range args {
+		if valid := IsValidFormatSteamID(arg); valid {
+			validSteamIDs = append(validSteamIDs, arg)
+		}
+	}
+	if len(validSteamIDs) == 0 {
+		return validSteamIDs, fmt.Errorf("No valid steamIDs given")
+	}
+	return validSteamIDs, nil
+}

@@ -124,3 +124,21 @@ func TestIsAPIKey(t *testing.T) {
 		t.Error("Invalid steamID given for valid response")
 	}
 }
+
+func TestExtractSteamIDs(t *testing.T) {
+	steamIDs := []string{"76561198090461077", "76561198130544932"}
+	IDs, err := ExtractSteamIDs(steamIDs)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(IDs) != 2 {
+		t.Error("two valid steamIDs given and only 1 returned")
+	}
+
+	steamIDs2 := []string{}
+	IDs, err = ExtractSteamIDs(steamIDs2)
+	if err == nil {
+		t.Errorf("no error given for empty steamID slice")
+	}
+
+}

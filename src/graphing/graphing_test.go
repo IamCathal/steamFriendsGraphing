@@ -50,10 +50,9 @@ func TestGraphing(t *testing.T) {
 		StatMode: false,
 		TestKeys: false,
 		Workers:  1,
-		SteamID:  "76561198130544932",
 		APIKeys:  APIKeys,
 	}
-	worker.InitCrawling(testConfig)
+	worker.InitCrawling(testConfig, "76561198090461077")
 
-	InitGraphing(2, 2, "76561198130544932")
+	InitGraphing(2, 2, "76561198090461077")
 }

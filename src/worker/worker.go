@@ -48,7 +48,6 @@ type CrawlerConfig struct {
 	StatMode bool
 	TestKeys bool
 	Workers  int
-	SteamID  string
 	APIKeys  []string
 }
 
@@ -94,15 +93,15 @@ func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
 
 // InitCrawling initialises the crawling and then starts up the graph crawler
 // that produces the HTML output
-func InitCrawling(cfg CrawlerConfig) (CrawlerConfig, error) {
-	temp := CrawlerConfig{}
+func InitCrawling(cfg CrawlerConfig, steamID string) (CrawlerConfig, error) {
+	temp := CrawlerConfig{Level: -1}
 	if cfg.TestKeys == true {
 		util.CheckAPIKeys(cfg.APIKeys)
 		return temp, nil
 	}
 
 	if cfg.StatMode {
-		resMap, err := util.GetUserDetails(cfg.APIKeys[0], cfg.SteamID)
+		resMap, err := util.GetUserDetails(cfg.APIKeys[0], steamID)
 		if err != nil {
 			return temp, err
 		}
@@ -112,7 +111,7 @@ func InitCrawling(cfg CrawlerConfig) (CrawlerConfig, error) {
 		return temp, nil
 	}
 
-	ControlFunc(cfg.APIKeys, cfg.SteamID, cfg.Level, cfg.Workers)
+	ControlFunc(cfg.APIKeys, steamID, cfg.Level, cfg.Workers)
 	return cfg, nil
 }
 

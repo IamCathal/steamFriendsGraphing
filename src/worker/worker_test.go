@@ -164,10 +164,9 @@ func TestConfigInit(t *testing.T) {
 		StatMode: false,
 		TestKeys: false,
 		Workers:  1,
-		SteamID:  "76561198282036055",
 		APIKeys:  APIKeys,
 	}
-	InitCrawling(testConfig)
+	InitCrawling(testConfig, "76561198282036055")
 	fmt.Printf("\n")
 	// StatMode invocation
 	testConfig2 := CrawlerConfig{
@@ -175,10 +174,9 @@ func TestConfigInit(t *testing.T) {
 		StatMode: true,
 		TestKeys: false,
 		Workers:  1,
-		SteamID:  "76561198144084014",
 		APIKeys:  APIKeys,
 	}
-	InitCrawling(testConfig2)
+	InitCrawling(testConfig2, "76561198144084014")
 	fmt.Printf("\n")
 	// testKeys invocation
 	testConfig3 := CrawlerConfig{
@@ -186,9 +184,8 @@ func TestConfigInit(t *testing.T) {
 		StatMode: false,
 		TestKeys: true,
 		Workers:  1,
-		SteamID:  "76561198144084014",
 		APIKeys:  APIKeys,
 	}
-	InitCrawling(testConfig3)
+	InitCrawling(testConfig3, "76561198144084014")
 	fmt.Printf("\n\n")
 }
