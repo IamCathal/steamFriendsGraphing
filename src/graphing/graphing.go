@@ -116,7 +116,8 @@ func CrawlCachedFriends(level, workers int, steamID, username string) {
 	}
 
 	gConfig.existingNodes[tempStruct.username] = true
-	gConfig.nodes = append(gConfig.nodes, charts.GraphNode{Name: tempStruct.username})
+	specColor := charts.ItemStyleOpts{Color: "#000000"}
+	gConfig.nodes = append(gConfig.nodes, charts.GraphNode{Name: tempStruct.username, ItemStyle: specColor})
 
 	wg.Add(1)
 	activeJobs++
