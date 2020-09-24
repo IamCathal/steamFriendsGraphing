@@ -406,28 +406,26 @@ func WriteToFile(apiKey, steamID string, friends util.FriendsStruct) {
 
 	if existing := CacheFileExists(steamID); !existing {
 		file, err := os.Create(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
+		fmt.Printf("[Worker WriteToFile] Here is ../\n")
+		files, err := ioutil.ReadDir("../")
 		if err != nil {
-			fmt.Printf("[Worker WriteToFile] Here is ../\n")
-			files, err := ioutil.ReadDir("../")
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			for _, f := range files {
-				fmt.Println(f.Name())
-			}
-			fmt.Printf("\n\n")
-			fmt.Printf("[Worker WriteToFile] Here is ../testData\n")
-			files, err = ioutil.ReadDir("../testData")
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			for _, f := range files {
-				fmt.Println(f.Name())
-			}
-			fmt.Printf("\n\n")
+			log.Fatal(err)
 		}
+
+		for _, f := range files {
+			fmt.Println(f.Name())
+		}
+		fmt.Printf("\n\n")
+		fmt.Printf("[Worker WriteToFile] Here is ../testData\n")
+		files, err = ioutil.ReadDir("../testData")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, f := range files {
+			fmt.Println(f.Name())
+		}
+		fmt.Printf("\n\n")
 		util.CheckErr(err)
 		defer file.Close()
 
