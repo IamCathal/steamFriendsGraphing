@@ -1,6 +1,7 @@
 package graphing
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -30,11 +31,14 @@ func getAPIKeysForTesting() []string {
 func TestMain(m *testing.M) {
 	os.Setenv("testing", "")
 	os.RemoveAll("../testData")
+	fmt.Println("[Worker] start deleted ../testData")
 	os.Mkdir("../testData", 0755)
+	fmt.Println("[Worker] start created ../testData")
 
 	code := m.Run()
 
 	os.RemoveAll("../testData")
+	fmt.Println("[Worker] end deleted ../testData")
 	os.Exit(code)
 }
 
