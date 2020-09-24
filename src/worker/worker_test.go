@@ -18,9 +18,7 @@ type testInput struct {
 func TestMain(m *testing.M) {
 	os.Setenv("testing", "")
 	os.RemoveAll("../testData")
-	if _, err := os.Stat("../testData"); os.IsNotExist(err) {
-		os.Mkdir("../testData", 0755)
-	}
+	os.Mkdir("../testData", 0755)
 
 	code := m.Run()
 
