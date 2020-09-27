@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/RyanCarrier/dijkstra"
 	"github.com/go-echarts/go-echarts/charts"
 )
 
@@ -71,6 +72,8 @@ func graphWorker(id int, jobs <-chan infoStruct, results chan<- infoStruct, wCon
 
 func CrawlCachedFriends(level, workers int, steamID, username string) {
 
+	makePath := false
+
 	jobs := make(chan infoStruct, 500000)
 	results := make(chan infoStruct, 500000)
 
@@ -115,6 +118,18 @@ func CrawlCachedFriends(level, workers int, steamID, username string) {
 		from:     username,
 	}
 
+	usersCount := 1
+	// Users is used to map a users position in the stack of calls to their username
+	// This is used as the dijkstra implementation only sorts based on ints so each
+	// user must be assigned this as a key and then coverted back later into usernames
+	users := make(map[int]string)
+	users[usersCount] = tempStruct.username
+
+	dijkstraGraph := dijkstra.NewGraph()
+	dijkstraGraph.AddVertex(usersCount)
+
+	usersCount++
+
 	gConfig.existingNodes[tempStruct.username] = true
 	specColor := charts.ItemStyleOpts{Color: "#000000"}
 	gConfig.nodes = append(gConfig.nodes, charts.GraphNode{Name: tempStruct.username, ItemStyle: specColor})
@@ -143,8 +158,19 @@ func CrawlCachedFriends(level, workers int, steamID, username string) {
 			if exists := NodeExists(result.username, existingNodes); !exists {
 				gConfig.existingNodes[result.username] = true
 				gConfig.nodes = append(gConfig.nodes, charts.GraphNode{Name: result.username})
+
+				users[usersCount] = result.username
+				dijkstraGraph.AddVertex(usersCount)
+				usersCount++
 			}
 			gConfig.links = append(gConfig.links, charts.GraphLink{Source: result.from, Target: result.username})
+
+			fromNum, ok := GetKeyFromValue(users, result.from)
+			if !ok {
+				log.Fatal("BAD THIS SHOULD NEVER HAPPEN")
+			}
+			dijkstraGraph.AddArc(fromNum, usersCount-1, 1)
+
 			fmt.Printf("[%d] %s[%s] -> %s[%s]\n", result.level, result.from, result.steamID, result.username, result.steamID)
 			newJob := infoStruct{
 				level:    result.level,
@@ -165,6 +191,30 @@ func CrawlCachedFriends(level, workers int, steamID, username string) {
 	fmt.Printf("\n============== Done ==============\n")
 	close(jobs)
 	close(results)
+
+	firstUser, ok := GetKeyFromValue(users, "Omac995")
+	if !ok {
+		fmt.Printf("User Omac995 has not been crawled\n")
+	}
+
+	secondUser, ok := GetKeyFromValue(users, "lozefase")
+	if !ok {
+		fmt.Printf("User lozefase has not been crawled\n")
+	}
+
+	if makePath == true {
+		best, err := dijkstraGraph.Shortest(firstUser, secondUser)
+		if err != nil {
+			fmt.Println("Couldn't find a path")
+		} else {
+			fmt.Println("Shortest distance ", best.Distance, " following path ")
+
+			for _, id := range best.Path {
+				fmt.Printf("%s -> ", users[id])
+			}
+			fmt.Println("")
+		}
+	}
 
 	graph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
 		charts.InitOpts{Width: "1800px", Height: "1080px"})

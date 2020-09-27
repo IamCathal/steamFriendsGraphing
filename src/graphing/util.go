@@ -156,3 +156,13 @@ func CheckErr(err error) {
 		log.Fatal(err)
 	}
 }
+
+// GetKeyFromValue gets a key for a given map value
+func GetKeyFromValue(userMap map[int]string, value string) (int, bool) {
+	for key, val := range userMap {
+		if val == value {
+			return key, true
+		}
+	}
+	return -1, false
+}
