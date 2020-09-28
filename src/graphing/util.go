@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/go-echarts/go-echarts/charts"
 )
 
 // IndivFriend holds profile information for
@@ -165,4 +167,23 @@ func GetKeyFromValue(userMap map[int]string, value string) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+// MergeNodes merges the node lists of the starting and target users. If there are
+// duplicate nodes in the graphing stage then the graphing framework will fail.
+func MergeNodes(firstNodes, secondNodes []charts.GraphNode) []charts.GraphNode {
+	foundNodes := make(map[string]bool)
+	allNodes := make([]charts.GraphNode, 0)
+
+	for _, node := range firstNodes {
+		allNodes = append(allNodes, node)
+		foundNodes[node.Name] = true
+	}
+
+	for _, node := range secondNodes {
+		if _, existing := foundNodes[node.Name]; !existing {
+			allNodes = append(allNodes, node)
+		}
+	}
+	return allNodes
 }

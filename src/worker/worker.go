@@ -93,26 +93,13 @@ func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
 
 // InitCrawling initialises the crawling and then starts up the graph crawler
 // that produces the HTML output
-func InitCrawling(cfg CrawlerConfig, steamID string) (CrawlerConfig, error) {
-	temp := CrawlerConfig{Level: -1}
+func InitCrawling(cfg CrawlerConfig, steamID string) {
+
 	if cfg.TestKeys == true {
 		util.CheckAPIKeys(cfg.APIKeys)
-		return temp, nil
-	}
-
-	if cfg.StatMode {
-		resMap, err := util.GetUserDetails(cfg.APIKeys[0], steamID)
-		if err != nil {
-			return temp, err
-		}
-		for k, v := range resMap {
-			fmt.Printf("%13s: %s\n", k, v)
-		}
-		return temp, nil
 	}
 
 	ControlFunc(cfg.APIKeys, steamID, cfg.Level, cfg.Workers)
-	return cfg, nil
 }
 
 // Worker is the crawling worker queue implementation. It takes in users off the jobs queue, processes

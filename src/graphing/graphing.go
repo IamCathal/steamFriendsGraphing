@@ -28,6 +28,16 @@ type workerConfig struct {
 	activeJobsMutex *sync.Mutex
 }
 
+type GraphData struct {
+	SteamID      string
+	Nodes        []charts.GraphNode
+	Links        []charts.GraphLink
+	EchartsGraph *charts.Graph
+
+	UsersMap      map[int]string
+	DijkstraGraph *dijkstra.Graph
+}
+
 // graphWorker is the graphing worker queue implementation. It's quite similar to
 // the crawling worker in the worker module but this is purely for graphing
 func graphWorker(id int, jobs <-chan infoStruct, results chan<- infoStruct, wConfig *workerConfig, gConfig *graphConfig, wg *sync.WaitGroup, activeJobs *int64, levelCap int) {
@@ -70,10 +80,7 @@ func graphWorker(id int, jobs <-chan infoStruct, results chan<- infoStruct, wCon
 	}
 }
 
-func CrawlCachedFriends(level, workers int, steamID, username string) {
-
-	makePath := false
-
+func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData {
 	jobs := make(chan infoStruct, 500000)
 	results := make(chan infoStruct, 500000)
 
@@ -131,6 +138,7 @@ func CrawlCachedFriends(level, workers int, steamID, username string) {
 	usersCount++
 
 	gConfig.existingNodes[tempStruct.username] = true
+	// Give the original user a black colored node to stand out
 	specColor := charts.ItemStyleOpts{Color: "#000000"}
 	gConfig.nodes = append(gConfig.nodes, charts.GraphNode{Name: tempStruct.username, ItemStyle: specColor})
 
@@ -192,34 +200,110 @@ func CrawlCachedFriends(level, workers int, steamID, username string) {
 	close(jobs)
 	close(results)
 
-	firstUser, ok := GetKeyFromValue(users, "Omac995")
+	// firstUser, ok := GetKeyFromValue(users, "Omac995")
+	// if !ok {
+	// 	fmt.Printf("User Omac995 has not been crawled\n")
+	// }
+
+	// secondUser, ok := GetKeyFromValue(users, "lozefase")
+	// if !ok {
+	// 	fmt.Printf("User lozefase has not been crawled\n")
+	// }
+
+	// if makePath == true {
+	// 	best, err := dijkstraGraph.Shortest(firstUser, secondUser)
+	// 	if err != nil {
+	// 		fmt.Println("Couldn't find a path")
+	// 	} else {
+	// 		fmt.Println("Shortest distance ", best.Distance, " following path ")
+
+	// 		for _, id := range best.Path {
+	// 			fmt.Printf("%s -> ", users[id])
+	// 		}
+	// 		fmt.Println("")
+	// 	}
+	// }
+
+	// graph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
+	// 	charts.InitOpts{Width: "1800px", Height: "1080px"})
+
+	// graph.Add("graph", gConfig.nodes, gConfig.links,
+	// 	charts.GraphOpts{Layout: "force", Roam: true, Force: charts.GraphForce{Repulsion: 34, Gravity: 0.16}, FocusNodeAdjacency: true},
+	// 	charts.EmphasisOpts{Label: charts.LabelTextOpts{Show: true, Position: "left", Color: "black"}},
+	// 	charts.LineStyleOpts{Width: 1, Color: "#b5b5b5"},
+	// )
+
+	// err := CreateFinishedGraphFolder()
+	// CheckErr(err)
+	// file, err := os.Create(fmt.Sprintf("../finishedGraphs/%s.html", steamID))
+	// CheckErr(err)
+
+	// graph.Render(file)
+
+	gData := &GraphData{
+		SteamID:      steamID,
+		Nodes:        gConfig.nodes,
+		Links:        gConfig.links,
+		EchartsGraph: graph,
+
+		UsersMap:      users,
+		DijkstraGraph: dijkstraGraph,
+	}
+	return gData
+}
+
+func (gData *GraphData) ApplyDijkstra(startUserID, endUserID string) {
+	firstUser, ok := GetKeyFromValue(gData.UsersMap, "Omac995")
 	if !ok {
 		fmt.Printf("User Omac995 has not been crawled\n")
 	}
 
-	secondUser, ok := GetKeyFromValue(users, "lozefase")
+	secondUser, ok := GetKeyFromValue(gData.UsersMap, "lozefase")
 	if !ok {
 		fmt.Printf("User lozefase has not been crawled\n")
 	}
 
-	if makePath == true {
-		best, err := dijkstraGraph.Shortest(firstUser, secondUser)
-		if err != nil {
-			fmt.Println("Couldn't find a path")
-		} else {
-			fmt.Println("Shortest distance ", best.Distance, " following path ")
+	best, err := gData.DijkstraGraph.Shortest(firstUser, secondUser)
+	if err != nil {
+		fmt.Println("Couldn't find a path")
+	} else {
+		fmt.Println("Shortest distance ", best.Distance, " following path ")
 
-			for _, id := range best.Path {
-				fmt.Printf("%s -> ", users[id])
-			}
-			fmt.Println("")
+		for _, id := range best.Path {
+			fmt.Printf("%s -> ", gData.UsersMap[id])
 		}
+		fmt.Println("")
 	}
+}
 
-	graph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
+func (gData *GraphData) Render() {
+	fmt.Println("Rendering")
+	// firstUser, ok := GetKeyFromValue(users, "Omac995")
+	// if !ok {
+	// 	fmt.Printf("User Omac995 has not been crawled\n")
+	// }
+
+	// secondUser, ok := GetKeyFromValue(users, "lozefase")
+	// if !ok {
+	// 	fmt.Printf("User lozefase has not been crawled\n")
+	// }
+
+	// best, err := gData.dijkstraGraph.Shortest(firstUser, secondUser)
+	// if err != nil {
+	// 	fmt.Println("Couldn't find a path")
+	// } else {
+	// 	fmt.Println("Shortest distance ", best.Distance, " following path ")
+
+	// 	for _, id := range best.Path {
+	// 		fmt.Printf("%s -> ", users[id])
+	// 	}
+	// 	fmt.Println("")
+	// }
+
+	gData.EchartsGraph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
 		charts.InitOpts{Width: "1800px", Height: "1080px"})
 
-	graph.Add("graph", gConfig.nodes, gConfig.links,
+	gData.EchartsGraph.Add("graph", gData.Nodes, gData.Links,
 		charts.GraphOpts{Layout: "force", Roam: true, Force: charts.GraphForce{Repulsion: 34, Gravity: 0.16}, FocusNodeAdjacency: true},
 		charts.EmphasisOpts{Label: charts.LabelTextOpts{Show: true, Position: "left", Color: "black"}},
 		charts.LineStyleOpts{Width: 1, Color: "#b5b5b5"},
@@ -227,17 +311,36 @@ func CrawlCachedFriends(level, workers int, steamID, username string) {
 
 	err := CreateFinishedGraphFolder()
 	CheckErr(err)
-	file, err := os.Create(fmt.Sprintf("../finishedGraphs/%s.html", steamID))
+	file, err := os.Create(fmt.Sprintf("../finishedGraphs/%s.html", gData.SteamID))
 	CheckErr(err)
 
-	graph.Render(file)
+	gData.EchartsGraph.Render(file)
 }
 
-func InitGraphing(level, workers int, steamID string) {
+func RenderTwo(gData *GraphData) {
+	gData.EchartsGraph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
+		charts.InitOpts{Width: "1800px", Height: "1080px"})
+
+	gData.EchartsGraph.Add("graph", gData.Nodes, gData.Links,
+		charts.GraphOpts{Layout: "force", Roam: true, Force: charts.GraphForce{Repulsion: 34, Gravity: 0.16}, FocusNodeAdjacency: true},
+		charts.EmphasisOpts{Label: charts.LabelTextOpts{Show: true, Position: "left", Color: "black"}},
+		charts.LineStyleOpts{Width: 1, Color: "#b5b5b5"},
+	)
+
+	err := CreateFinishedGraphFolder()
+	CheckErr(err)
+	file, err := os.Create("../finishedGraphs/eee.html")
+	CheckErr(err)
+
+	gData.EchartsGraph.Render(file)
+	fmt.Println("DONE RENDER 2")
+}
+
+func InitGraphing(level, workers int, steamID string) *GraphData {
 	fmt.Printf("=============================================\n")
 	fmt.Printf("                GRAPHING\n\n")
 	username, err := GetUsernameFromCacheFile(steamID)
 	CheckErr(err)
 
-	CrawlCachedFriends(level, workers, steamID, username)
+	return CrawlCachedFriends(level, workers, steamID, username)
 }

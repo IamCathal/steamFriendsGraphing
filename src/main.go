@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/go-echarts/go-echarts/charts"
 	"github.com/steamFriendsGraphing/graphing"
 	"github.com/steamFriendsGraphing/server"
 	"github.com/steamFriendsGraphing/util"
@@ -40,19 +41,53 @@ func main() {
 		APIKeys:  apiKeys,
 	}
 
-	if len(os.Args) > 1 {
+	if len(os.Args) < 1 {
+		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
+		return
+	}
+
+	if config.StatMode {
 		for _, steamID := range steamIDs {
-			cfg, err := worker.InitCrawling(config, steamID)
-			if err != nil {
-				log.Fatal(err)
-			}
-			// Level -1 is passed back when statMode is invoked
-			if cfg.Level != -1 {
-				graphing.InitGraphing(cfg.Level, cfg.Workers, steamID)
+			resMap, err := util.GetUserDetails(config.APIKeys[0], steamID)
+			util.CheckErr(err)
+
+			for k, v := range resMap {
+				fmt.Printf("%13s: %s\n", k, v)
 			}
 			fmt.Printf("\n")
 		}
-	} else {
-		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
+		return
 	}
+
+	if len(steamIDs) == 1 {
+		worker.InitCrawling(config, steamIDs[0])
+
+		gData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
+		gData.Render()
+		return
+	}
+
+	if len(steamIDs) == 2 {
+
+		worker.InitCrawling(config, steamIDs[0])
+		worker.InitCrawling(config, steamIDs[1])
+
+		StartUserGraphData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
+		EndUserGraphData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[1])
+
+		graph := charts.NewGraph()
+		allNodes := graphing.MergeNodes(StartUserGraphData.Nodes, EndUserGraphData.Nodes)
+		graphData := &graphing.GraphData{
+			Nodes:        allNodes,
+			Links:        append(StartUserGraphData.Links, EndUserGraphData.Links...),
+			EchartsGraph: graph,
+		}
+
+		// startUsername, err := util.GetUsername(config.APIKeys[0], steamIDs[0])
+
+		graphing.RenderTwo(graphData)
+		return
+
+	}
+	fmt.Printf("Invalid steamIDs")
 }
