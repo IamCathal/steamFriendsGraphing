@@ -59,7 +59,7 @@ For the moment the easiest way to find your steam64ID is to use [Steam ID Finder
 
 I'm using a slightly modified version of Jordan Pole's [gopherbadger](https://github.com/jpoles1/gopherbadger) in a pre-commit hook. The reason I say slightly modified is because I changed the go test command it invokes from `go test ./...` to `go test -v -p 1 ./...` . I like verbose logging and the `-p 1` refers to [this horrible phantom bug](https://github.com/IamCathal/steamFriendsGraphing/commit/341356a59bf4c0f08d1e621f8f55e3d3cad4a07d) that I spent way too much time trying to fix.
 
-To change the badge generator you just need to make the change below to [this line](https://github.com/jpoles1/gopherbadger/blob/567925ff1e8172aa4a53570817e75a606781f52e/main.go#L136) in gopherbadger. After that you can `cd $GOPATH/src/github.com/jpoles1/gopherbadger && go build && sudo cp badge /usr/bin` and then you're good to go
+To change the badge generator you just need to make the change below to [this line](https://github.com/jpoles1/gopherbadger/blob/567925ff1e8172aa4a53570817e75a606781f52e/main.go#L136) in gopherbadger. After that you can `cd $GOPATH/src/github.com/jpoles1/gopherbadger && go build && sudo cp gopherbadger /usr/bin` and then you're good to go
 ```diff
 - coverageCommand = fmt.Sprintf("go test %s/... -coverprofile=coverage.out %s && %s", config.rootFolderFlag, flagsCommands, toolCoverCommand)
 + coverageCommand = fmt.Sprintf("go test -v -p 1 %s/... -coverprofile=coverage.out %s && %s", config.rootFolderFlag, flagsCommands, toolCoverCommand)
@@ -69,7 +69,7 @@ To change the badge generator you just need to make the change below to [this li
 ```bash
 #!/bin/bash
 echo "Testing and generating coverage badge, this might take a few seconds"
-badge -png=true
+gopherbadger -png=true
 git add coverage_badge.png
 ```
 
