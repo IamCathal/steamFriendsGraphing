@@ -29,15 +29,17 @@ func readAndUnmarshal(res *httptest.ResponseRecorder) (basicResponse, error) {
 
 func initRouter() *mux.Router {
 	r := mux.NewRouter()
-	r.HandleFunc("/", HomeHandler).Methods("GET")
+	r.HandleFunc("/", HomeHandler).Methods("POST")
 	r.HandleFunc("/crawl", crawl).Methods("POST")
 	r.HandleFunc("/statlookup", statLookup).Methods("POST")
+	r.HandleFunc("/status", status).Methods("POST")
 	r.Use(CrawlMiddleware)
+
 	return r
 }
 
 func TestAPIStatus(t *testing.T) {
-	req, _ := http.NewRequest("GET", "/", nil)
+	req, _ := http.NewRequest("POST", "/", nil)
 	res := httptest.NewRecorder()
 	initRouter().ServeHTTP(res, req)
 
