@@ -14,8 +14,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func readAndUnmarshal(res *httptest.ResponseRecorder) (BasicResponse, error) {
-	resJSON := BasicResponse{}
+func readAndUnmarshal(res *httptest.ResponseRecorder) (basicResponse, error) {
+	resJSON := basicResponse{}
 	response, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return resJSON, err

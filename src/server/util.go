@@ -8,9 +8,14 @@ import (
 	"time"
 )
 
-type BasicResponse struct {
+type basicResponse struct {
 	Status int    `json:"status"`
 	Body   string `json:"body"`
+}
+
+type statusResponse struct {
+	Status string        `json:"status"`
+	Uptime time.Duration `json:"uptime"`
 }
 
 type Config struct {
@@ -19,6 +24,16 @@ type Config struct {
 	TestKeys string `json:"testKeys"`
 	Workers  string `json:"workers"`
 	SteamID  string `json:"steamID"`
+}
+
+// inMiddlewareBlackist checks if an endpoint is blacklisted from
+// the middleware function i.e no input validation should occur
+func inMiddlewareBlacklist(endpoint string) bool {
+	_, ok := middlewareBlackList[endpoint]
+	if ok {
+		return true
+	}
+	return false
 }
 
 // LogCall logs a call to the console with it's details
