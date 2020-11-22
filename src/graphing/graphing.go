@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/go-echarts/go-echarts/charts"
-	"github.com/steamFriendsGraphing/dijkstra"
+	dijkstra "github.com/iamcathal/dijkstra2"
 )
 
 type graphConfig struct {
@@ -43,6 +43,7 @@ type GraphData struct {
 // the crawling worker in the worker module but this is purely for graphing
 func graphWorker(id int, jobs <-chan infoStruct, results chan<- infoStruct, wConfig *workerConfig, gConfig *graphConfig, wg *sync.WaitGroup, activeJobs *int64, levelCap int) {
 	for {
+
 		wConfig.jobMutex.Lock()
 		job := <-jobs
 		wConfig.jobMutex.Unlock()

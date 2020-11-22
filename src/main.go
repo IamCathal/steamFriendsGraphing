@@ -58,7 +58,7 @@ func main() {
 		}
 		return
 	}
-	fmt.Printf("Len is %d\n", len(steamIDs))
+
 	if len(steamIDs) == 1 {
 		worker.InitCrawling(config, steamIDs[0])
 
