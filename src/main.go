@@ -41,6 +41,8 @@ func main() {
 		APIKeys:  apiKeys,
 	}
 
+	fileName := ""
+
 	if len(os.Args) < 1 {
 		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
 		return
@@ -60,15 +62,16 @@ func main() {
 	}
 
 	if len(steamIDs) == 1 {
+		fileName = steamIDs[0]
 		worker.InitCrawling(config, steamIDs[0])
 
 		gData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
-		gData.Render()
+		gData.Render(fileName)
 		return
 	}
 
 	if len(steamIDs) == 2 {
-		fmt.Printf("Len is 2\n")
+		fileName = "eee"
 		worker.InitCrawling(config, steamIDs[0])
 		worker.InitCrawling(config, steamIDs[1])
 
@@ -90,47 +93,34 @@ func main() {
 			DijkstraGraph: allDijkstraGraph,
 		}
 		newNodes := make([]charts.GraphNode, 0)
-		bestPath := graphData.GetDijkstraPath(steamIDs[0], steamIDs[1])
-		fmt.Println("The route:")
-		for _, username := range bestPath {
-			fmt.Printf("%s -> ", username)
-		}
-		fmt.Printf("\n")
-		foundNode := false
-		if len(bestPath) != 0 {
-			fmt.Println("more than 0")
-			for _, username := range graphData.Nodes {
-				fmt.Printf("Checking %s\n", username.Name)
-				for _, pathUsername := range bestPath {
-					if username.Name == pathUsername {
-						fmt.Printf("Color was applied to %s\n", pathUsername)
-						// fmt.Printf("Before: %+v\n", username.ItemStyle)
-						specColor := charts.ItemStyleOpts{Color: "#38413A"}
-						// username.ItemStyle = specColor
-						// fmt.Printf("After: %+v\n\n", username.ItemStyle)
-						newNodes = append(newNodes, charts.GraphNode{Name: pathUsername, ItemStyle: specColor})
-						foundNode = true
-						break
-
-					} else {
-						fmt.Printf("%s != %s\n", username.Name, pathUsername)
+		bestPath, exists := graphData.GetDijkstraPath(steamIDs[0], steamIDs[1])
+		if exists {
+			fmt.Println("The route:")
+			for _, username := range bestPath {
+				fmt.Printf("%s -> ", username)
+			}
+			fmt.Printf("\n")
+			foundNode := false
+			if len(bestPath) != 0 {
+				for _, username := range graphData.Nodes {
+					for _, pathUsername := range bestPath {
+						if username.Name == pathUsername {
+							specColor := charts.ItemStyleOpts{Color: "#38413A"}
+							newNodes = append(newNodes, charts.GraphNode{Name: pathUsername, ItemStyle: specColor})
+							foundNode = true
+							break
+						}
 					}
+					if !foundNode {
+						newNodes = append(newNodes, charts.GraphNode{Name: username.Name})
+					}
+					foundNode = false
 				}
-				if !foundNode {
-					newNodes = append(newNodes, charts.GraphNode{Name: username.Name})
-				}
-				foundNode = false
-			}
-
-			fmt.Println("=====================")
-			for _, node := range newNodes {
-				fmt.Printf("%s: %+v\n", node.Name, node.ItemStyle)
 			}
 		}
-		graphData.Nodes = newNodes
-		graphData.Render()
-		return
 
+		graphData.Nodes = newNodes
+		graphData.Render(fileName)
+		return
 	}
-	fmt.Printf("Invalid steamIDs")
 }
