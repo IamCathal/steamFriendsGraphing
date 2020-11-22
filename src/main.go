@@ -78,20 +78,6 @@ func main() {
 		graph := charts.NewGraph()
 		allNodes := graphing.MergeNodes(StartUserGraphData.Nodes, EndUserGraphData.Nodes)
 
-		// allUsersMap := graphing.MergeUsersMaps(StartUserGraphData.UsersMap, EndUserGraphData.UsersMap)
-		// fmt.Printf("All users map\n")
-		// for key, val := range allUsersMap {
-		// 	fmt.Printf("[%d] -> [%s]\n", key, val)
-		// }
-		// fmt.Printf("First map\n")
-		// for key, val := range StartUserGraphData.UsersMap {
-		// 	fmt.Printf("[%d] -> [%s]\n", key, val)
-		// }
-		// fmt.Printf("Second map\n")
-		// for key, val := range EndUserGraphData.UsersMap {
-		// 	fmt.Printf("[%d] -> [%s]\n", key, val)
-		// }
-
 		allDijkstraGraph, allUsersMap := graphing.MergeDijkstraGraphs(StartUserGraphData.DijkstraGraph, EndUserGraphData.DijkstraGraph, StartUserGraphData.UsersMap, EndUserGraphData.UsersMap)
 
 		graphData := &graphing.GraphData{
@@ -103,8 +89,45 @@ func main() {
 			UsersMap:      allUsersMap,
 			DijkstraGraph: allDijkstraGraph,
 		}
+		newNodes := make([]charts.GraphNode, 0)
+		bestPath := graphData.GetDijkstraPath(steamIDs[0], steamIDs[1])
+		fmt.Println("The route:")
+		for _, username := range bestPath {
+			fmt.Printf("%s -> ", username)
+		}
+		fmt.Printf("\n")
+		foundNode := false
+		if len(bestPath) != 0 {
+			fmt.Println("more than 0")
+			for _, username := range graphData.Nodes {
+				fmt.Printf("Checking %s\n", username.Name)
+				for _, pathUsername := range bestPath {
+					if username.Name == pathUsername {
+						fmt.Printf("Color was applied to %s\n", pathUsername)
+						// fmt.Printf("Before: %+v\n", username.ItemStyle)
+						specColor := charts.ItemStyleOpts{Color: "#38413A"}
+						// username.ItemStyle = specColor
+						// fmt.Printf("After: %+v\n\n", username.ItemStyle)
+						newNodes = append(newNodes, charts.GraphNode{Name: pathUsername, ItemStyle: specColor})
+						foundNode = true
+						break
 
-		graphData.GetDijkstraPath(steamIDs[0], steamIDs[1])
+					} else {
+						fmt.Printf("%s != %s\n", username.Name, pathUsername)
+					}
+				}
+				if !foundNode {
+					newNodes = append(newNodes, charts.GraphNode{Name: username.Name})
+				}
+				foundNode = false
+			}
+
+			fmt.Println("=====================")
+			for _, node := range newNodes {
+				fmt.Printf("%s: %+v\n", node.Name, node.ItemStyle)
+			}
+		}
+		graphData.Nodes = newNodes
 		graphData.Render()
 		return
 

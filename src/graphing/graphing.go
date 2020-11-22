@@ -247,8 +247,8 @@ func (gData *GraphData) GetDijkstraPath(startUserID, endUserID string) []string 
 	if !ok {
 		fmt.Printf("User %s has not been crawled\n", secondUsername)
 	}
-	fmt.Println(gData.UsersMap)
-	fmt.Printf("%d -> %d\n", firstUser, secondUser)
+	// fmt.Println(gData.UsersMap)
+	// fmt.Printf("%d -> %d\n", firstUser, secondUser)
 	best, err := gData.DijkstraGraph.Shortest(firstUser, secondUser)
 	bestPathUsernames := make([]string, 0)
 	if err != nil {
@@ -257,7 +257,7 @@ func (gData *GraphData) GetDijkstraPath(startUserID, endUserID string) []string 
 		fmt.Println("Shortest distance ", best.Distance, " following path ")
 
 		for _, id := range best.Path {
-			fmt.Printf("%s -> ", gData.UsersMap[id])
+			// fmt.Printf("%s -> ", gData.UsersMap[id])
 			bestPathUsernames = append(bestPathUsernames, gData.UsersMap[id])
 		}
 		fmt.Println("")
@@ -397,7 +397,7 @@ func MergeDijkstraGraphs(startUserGraph, endUserGraph *dijkstra.Graph, startUser
 }
 
 func (gData *GraphData) Render() {
-	fmt.Println("Rendering")
+	fmt.Println("\nRendering")
 
 	gData.EchartsGraph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
 		charts.InitOpts{Width: "1800px", Height: "1080px"})
