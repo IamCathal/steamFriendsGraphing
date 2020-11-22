@@ -4,10 +4,9 @@ import sys
  
 bodyObj = {
      'level': '2',
-     'statMode':'true',
-     'testKeys':'false',
+     'statMode':'false',
      'workers':'2',
-     'steamID':'76561197960271945'
+     'steamID0':'76561197960271945'
     }
 
 if len(sys.argv) < 2:

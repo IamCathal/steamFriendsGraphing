@@ -36,7 +36,8 @@ func CrawlMiddleware(next http.Handler) http.Handler {
 
 		_, err := DecodeBody(r, vars)
 		if err != nil {
-			log.Fatal(err)
+			sendErrorResponse(w, r, http.StatusBadRequest, vars["startTime"], "invalid input")
+			return
 		}
 
 		next.ServeHTTP(w, r)
@@ -66,7 +67,7 @@ func statLookup(w http.ResponseWriter, req *http.Request) {
 	apiKeys, err := util.GetAPIKeys()
 	util.CheckErr(err)
 
-	resultMap, err := util.GetUserDetails(apiKeys[0], vars["steamID"])
+	resultMap, err := util.GetUserDetails(apiKeys[0], vars["steamID0"])
 	util.CheckErr(err)
 
 	res := basicResponse{
@@ -83,12 +84,12 @@ func statLookup(w http.ResponseWriter, req *http.Request) {
 func crawl(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	configText := fmt.Sprintf("Level: %s - StatMode: %s - TestKeys: %s - Workers: %s - SteamID: %s",
-		vars["level"], vars["statmode"], vars["testkeys"], vars["workers"], vars["steamID"])
+	// configText := fmt.Sprintf("Level: %s - StatMode: %s - TestKeys: %s - Workers: %s - SteamID: %s",
+	// 	vars["level"], vars["statmode"], vars["testkeys"], vars["workers"], vars["steamID0"])
 
 	res := basicResponse{
 		Status: http.StatusOK,
-		Body:   fmt.Sprintf("Crawling with config %s. Your finished graph will be saved under %s.html", configText, vars["steamID"]),
+		Body:   fmt.Sprintf("Your finished graph will be saved under %s.html", vars["steamID0"]),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

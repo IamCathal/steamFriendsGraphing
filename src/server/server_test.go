@@ -55,7 +55,7 @@ func TestAPIStatus(t *testing.T) {
 
 func TestStatLookup(t *testing.T) {
 	reqBody, err := json.Marshal(map[string]string{
-		"steamID":  "76561197960271945",
+		"steamID0": "76561197960271945",
 		"statMode": "true",
 	})
 	if err != nil {
@@ -81,7 +81,7 @@ func TestCrawl(t *testing.T) {
 		"level":    "3",
 		"testkeys": "false",
 		"workers":  "4",
-		"steamID":  "76561197960271945",
+		"steamID0": "76561197960271945",
 		"statmode": "true",
 	})
 	if err != nil {
