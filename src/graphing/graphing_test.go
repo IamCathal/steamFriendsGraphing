@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-echarts/go-echarts/charts"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/steamFriendsGraphing/worker"
 )
@@ -53,4 +54,28 @@ func TestGraphing(t *testing.T) {
 	worker.InitCrawling(testConfig, "76561198090461077")
 
 	InitGraphing(2, 2, "76561198090461077")
+}
+
+func TestMergeNodes(t *testing.T) {
+	nodes1 := make([]charts.GraphNode, 0)
+	nodes2 := make([]charts.GraphNode, 0)
+
+	nodes1 = append(nodes1, charts.GraphNode{Name: "Cathal"})
+	nodes1 = append(nodes1, charts.GraphNode{Name: "Joe"})
+	nodes1 = append(nodes1, charts.GraphNode{Name: "Declan"})
+	nodes1 = append(nodes1, charts.GraphNode{Name: "Michael"})
+
+	nodes2 = append(nodes2, charts.GraphNode{Name: "Michael"})
+	nodes2 = append(nodes2, charts.GraphNode{Name: "Declan"})
+	nodes2 = append(nodes2, charts.GraphNode{Name: "Johnny"})
+	nodes2 = append(nodes2, charts.GraphNode{Name: "Mairtin"})
+
+	allNodes := MergeNodes(nodes1, nodes2)
+	wantNodes := []string{"Cathal", "Joe", "Declan", "Michael", "Johnny", "Mairtin"}
+
+	for i, name := range wantNodes {
+		if allNodes[i].Name != name {
+			t.Errorf("Node %d has %s instead of %s", i, allNodes[i].Name, name)
+		}
+	}
 }

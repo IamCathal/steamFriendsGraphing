@@ -137,6 +137,14 @@ func NodeExists(username string, nodeMap map[string]bool) bool {
 	return false
 }
 
+func NodeExistsInt(ID int, nodeMap map[int]bool) bool {
+	_, ok := nodeMap[ID]
+	if ok {
+		return true
+	}
+	return false
+}
+
 // CreateUserDataFolder creates a folder for holding cache.
 // Can either be userData for regular use or testData when running under github actions.
 func CreateFinishedGraphFolder() error {
@@ -175,14 +183,20 @@ func MergeNodes(firstNodes, secondNodes []charts.GraphNode) []charts.GraphNode {
 	foundNodes := make(map[string]bool)
 	allNodes := make([]charts.GraphNode, 0)
 
+	secondUsername := secondNodes[0].Name
+
 	for _, node := range firstNodes {
-		allNodes = append(allNodes, node)
-		foundNodes[node.Name] = true
+		if node.Name != secondUsername {
+			allNodes = append(allNodes, node)
+			foundNodes[node.Name] = true
+			// fmt.Printf("[%d : %s]\n", len(allNodes), node.Name)
+		}
 	}
 
 	for _, node := range secondNodes {
 		if _, existing := foundNodes[node.Name]; !existing {
 			allNodes = append(allNodes, node)
+			// fmt.Printf("[%d : %s]\n", len(allNodes), node.Name)
 		}
 	}
 	return allNodes

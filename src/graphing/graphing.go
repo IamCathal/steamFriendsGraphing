@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/RyanCarrier/dijkstra"
 	"github.com/go-echarts/go-echarts/charts"
+	"github.com/steamFriendsGraphing/dijkstra"
 )
 
 type graphConfig struct {
@@ -34,6 +34,7 @@ type GraphData struct {
 	Links        []charts.GraphLink
 	EchartsGraph *charts.Graph
 
+	ApplyDijkstra bool
 	UsersMap      map[int]string
 	DijkstraGraph *dijkstra.Graph
 }
@@ -178,6 +179,7 @@ func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData
 				log.Fatal("BAD THIS SHOULD NEVER HAPPEN")
 			}
 			dijkstraGraph.AddArc(fromNum, usersCount-1, 1)
+			dijkstraGraph.AddArc(usersCount-1, fromNum, 1)
 
 			fmt.Printf("[%d] %s[%s] -> %s[%s]\n", result.level, result.from, result.steamID, result.username, result.steamID)
 			newJob := infoStruct{
@@ -200,46 +202,6 @@ func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData
 	close(jobs)
 	close(results)
 
-	// firstUser, ok := GetKeyFromValue(users, "Omac995")
-	// if !ok {
-	// 	fmt.Printf("User Omac995 has not been crawled\n")
-	// }
-
-	// secondUser, ok := GetKeyFromValue(users, "lozefase")
-	// if !ok {
-	// 	fmt.Printf("User lozefase has not been crawled\n")
-	// }
-
-	// if makePath == true {
-	// 	best, err := dijkstraGraph.Shortest(firstUser, secondUser)
-	// 	if err != nil {
-	// 		fmt.Println("Couldn't find a path")
-	// 	} else {
-	// 		fmt.Println("Shortest distance ", best.Distance, " following path ")
-
-	// 		for _, id := range best.Path {
-	// 			fmt.Printf("%s -> ", users[id])
-	// 		}
-	// 		fmt.Println("")
-	// 	}
-	// }
-
-	// graph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
-	// 	charts.InitOpts{Width: "1800px", Height: "1080px"})
-
-	// graph.Add("graph", gConfig.nodes, gConfig.links,
-	// 	charts.GraphOpts{Layout: "force", Roam: true, Force: charts.GraphForce{Repulsion: 34, Gravity: 0.16}, FocusNodeAdjacency: true},
-	// 	charts.EmphasisOpts{Label: charts.LabelTextOpts{Show: true, Position: "left", Color: "black"}},
-	// 	charts.LineStyleOpts{Width: 1, Color: "#b5b5b5"},
-	// )
-
-	// err := CreateFinishedGraphFolder()
-	// CheckErr(err)
-	// file, err := os.Create(fmt.Sprintf("../finishedGraphs/%s.html", steamID))
-	// CheckErr(err)
-
-	// graph.Render(file)
-
 	gData := &GraphData{
 		SteamID:      steamID,
 		Nodes:        gConfig.nodes,
@@ -252,18 +214,42 @@ func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData
 	return gData
 }
 
-func (gData *GraphData) ApplyDijkstra(startUserID, endUserID string) {
-	firstUser, ok := GetKeyFromValue(gData.UsersMap, "Omac995")
+func mergeUsersMaps(startUsersMap, endUsersMap map[int]string) map[int]string {
+	allUsersMap := make(map[int]string)
+	for key, val := range startUsersMap {
+		allUsersMap[key] = val
+	}
+	for _, val := range endUsersMap {
+		if _, exists := GetKeyFromValue(allUsersMap, val); !exists {
+			allUsersMap[len(allUsersMap)+1] = val
+		}
+	}
+	return allUsersMap
+}
+
+// func MergeDijkstraNodes(startUserGraph, endUserGraph *dijkstra.Graph) *dijkstra.Graph {
+
+// }
+
+func (gData *GraphData) GetDijkstraPath(startUserID, endUserID string) []string {
+	fmt.Printf("GETTING DIJKSTRA\n")
+	firstUsername, err := GetUsernameFromCacheFile(startUserID)
+	CheckErr(err)
+	firstUser, ok := GetKeyFromValue(gData.UsersMap, firstUsername)
 	if !ok {
-		fmt.Printf("User Omac995 has not been crawled\n")
+		fmt.Printf("User %s has not been crawled\n", firstUsername)
 	}
 
-	secondUser, ok := GetKeyFromValue(gData.UsersMap, "lozefase")
+	secondUsername, err := GetUsernameFromCacheFile(endUserID)
+	CheckErr(err)
+	secondUser, ok := GetKeyFromValue(gData.UsersMap, secondUsername)
 	if !ok {
-		fmt.Printf("User lozefase has not been crawled\n")
+		fmt.Printf("User %s has not been crawled\n", secondUsername)
 	}
-
+	fmt.Println(gData.UsersMap)
+	fmt.Printf("%d -> %d\n", firstUser, secondUser)
 	best, err := gData.DijkstraGraph.Shortest(firstUser, secondUser)
+	bestPathUsernames := make([]string, 0)
 	if err != nil {
 		fmt.Println("Couldn't find a path")
 	} else {
@@ -271,53 +257,147 @@ func (gData *GraphData) ApplyDijkstra(startUserID, endUserID string) {
 
 		for _, id := range best.Path {
 			fmt.Printf("%s -> ", gData.UsersMap[id])
+			bestPathUsernames = append(bestPathUsernames, gData.UsersMap[id])
 		}
 		fmt.Println("")
 	}
+
+	return bestPathUsernames
+}
+
+func MergeDijkstraGraphs(startUserGraph, endUserGraph *dijkstra.Graph, startUsersMap, endUsersMap map[int]string) (*dijkstra.Graph, map[int]string) {
+	allUsersMap := mergeUsersMaps(startUsersMap, endUsersMap)
+	fmt.Println("start users map::::::::")
+	for key, val := range startUsersMap {
+		fmt.Printf("[%d : %s]\n", key, val)
+	}
+	fmt.Println("")
+	fmt.Println("end users map::::::::")
+	for key, val := range endUsersMap {
+		fmt.Printf("[%d : %s]\n", key, val)
+	}
+	fmt.Println("")
+	fmt.Println("All users map::::::::")
+	for key, val := range allUsersMap {
+		fmt.Printf("[%d : %s]\n", key, val)
+	}
+	fmt.Println("")
+	existingNodesInt := make(map[int]bool)
+	allGraph := dijkstra.NewGraph()
+	fmt.Printf("\n\n\n")
+	for _, indivNode := range startUserGraph.Verticies {
+		fmt.Printf("[1]Does node %d exist yet? ", indivNode.ID)
+		if exists := NodeExistsInt(indivNode.ID, existingNodesInt); !exists {
+			fmt.Printf("yes\n")
+			allGraph.AddVertex(indivNode.ID)
+			existingNodesInt[indivNode.ID] = true
+			// fmt.Printf("Added %d: %+v\n", indivNode.ID, indivNode.Arcs)
+		}
+		for ID, _ := range indivNode.Arcs {
+			// fmt.Printf("Added from %d: %d\n", indivNode.ID, ID)
+			// fmt.Printf("Add %d -> %d AND %d -> %d\n", indivNode.ID, ID, ID, indivNode.ID)
+			if exist := NodeExistsInt(ID, existingNodesInt); !exist {
+				allGraph.AddVertex(ID)
+			}
+
+			allGraph.AddArc(indivNode.ID, ID, 1)
+			allGraph.AddArc(ID, indivNode.ID, 1)
+			// fmt.Println(allGraph.Verticies)
+		}
+		// fmt.Printf("After pass: %+v\n\n", startUserGraph.Verticies)
+	}
+
+	for _, indivNode := range endUserGraph.Verticies {
+		if indivNode.ID != 0 {
+			fmt.Printf("[2]Does node %d exist yet? ", indivNode.ID)
+			convertedIDUsername := endUsersMap[indivNode.ID]
+			convertedID, ok := GetKeyFromValue(allUsersMap, convertedIDUsername)
+			if !ok {
+				if convertedID == 0 {
+					log.Fatal("BAD THIS SHOULD NEVER HAPPEN")
+				}
+			}
+			fmt.Printf("\n============== %d is actually [%d] %s\n", indivNode.ID, convertedID, convertedIDUsername)
+			if exists := NodeExistsInt(convertedID, existingNodesInt); !exists {
+				allGraph.AddVertex(convertedID)
+				existingNodesInt[convertedID] = true
+				fmt.Printf("Added %d: %+v\n", convertedID, indivNode.Arcs)
+			}
+			for ID, _ := range indivNode.Arcs {
+				// fmt.Printf("Added from %d: %d\n", indivNode.ID, ID)
+				arcConvertedIDUsername := endUsersMap[ID]
+				arcConvertedID, ok := GetKeyFromValue(allUsersMap, arcConvertedIDUsername)
+				fmt.Printf("[[[[[[ %d is actually %d [%s]\n", ID, arcConvertedID, arcConvertedIDUsername)
+				if !ok {
+					if convertedID == 0 {
+						log.Fatal("BAD THIS SHOULD NEVER HAPPEN")
+					}
+				}
+				// fmt.Printf("Add %d -> %d AND %d -> %d\n", convertedID, arcConvertedID, arcConvertedID, convertedID)
+				if exist := NodeExistsInt(arcConvertedID, existingNodesInt); !exist {
+					allGraph.AddVertex(arcConvertedID)
+				}
+
+				allGraph.AddArc(convertedID, arcConvertedID, 1)
+				allGraph.AddArc(arcConvertedID, convertedID, 1)
+				// fmt.Println(allGraph.Verticies)
+			}
+		}
+		// fmt.Printf("After pass: %+v\n\n", startUserGraph.Verticies)
+	}
+
+	// fmt.Printf("All graph after first passs:\n")
+	// for _, indivNode := range allGraph.Verticies {
+	// 	fmt.Printf("--- %d:\n", indivNode.ID)
+	// 	for ID, _ := range indivNode.Arcs {
+	// 		fmt.Printf("[%d] arc %d -> %d\n", len(indivNode.Arcs), indivNode.ID, ID)
+	// 	}
+	// }
+	// fmt.Printf("\n")
+
+	// for _, indivNode := range endUserDijkstraGraph.Verticies {
+	// 	allGraph.AddVertex(indivNode.ID)
+	// 	for ID, _ := range indivNode.Arcs {
+	// 		fmt.Printf("Adding %d -> %d\n", indivNode.ID, ID)
+	// 		allGraph.AddArc(indivNode.ID, ID, 1)
+	// 	}
+	// }
+
+	// fmt.Printf("All graph after second passs:\n")
+	// for _, indivNode := range allGraph.Verticies {
+	// 	fmt.Printf("%d: %d\n", indivNode.ID, indivNode.Arcs)
+	// }
+
+	// for _, indivNode := range endUserDijkstraGraph.Verticies {
+	// 	allGraph.AddVertex(indivNode.ID)
+	// }
+
+	// for _, indivNode := range endUserDijkstraGraph.Verticies {
+	// 	for ID, _ := range indivNode.Arcs {
+	// 		// fmt.Printf("Adding %d -> %d\n", indivNode.ID, ID)
+	// 		allGraph.AddArc(indivNode.ID, ID, 1)
+	// 	}
+	// }
+	fmt.Println("START VERTICIEDS")
+	for _, indivNode := range startUserGraph.Verticies {
+		fmt.Printf("%d: %d\n", indivNode.ID, indivNode.Arcs)
+	}
+
+	fmt.Println("END VERTICIES")
+	for _, indivNode := range endUserGraph.Verticies {
+		fmt.Printf("%d: %d\n", indivNode.ID, indivNode.Arcs)
+	}
+	fmt.Println("ALL GRAPH")
+	for _, indivNode := range allGraph.Verticies {
+		fmt.Printf("%d: %d\n", indivNode.ID, indivNode.Arcs)
+	}
+
+	return allGraph, allUsersMap
 }
 
 func (gData *GraphData) Render() {
 	fmt.Println("Rendering")
-	// firstUser, ok := GetKeyFromValue(users, "Omac995")
-	// if !ok {
-	// 	fmt.Printf("User Omac995 has not been crawled\n")
-	// }
 
-	// secondUser, ok := GetKeyFromValue(users, "lozefase")
-	// if !ok {
-	// 	fmt.Printf("User lozefase has not been crawled\n")
-	// }
-
-	// best, err := gData.dijkstraGraph.Shortest(firstUser, secondUser)
-	// if err != nil {
-	// 	fmt.Println("Couldn't find a path")
-	// } else {
-	// 	fmt.Println("Shortest distance ", best.Distance, " following path ")
-
-	// 	for _, id := range best.Path {
-	// 		fmt.Printf("%s -> ", users[id])
-	// 	}
-	// 	fmt.Println("")
-	// }
-
-	gData.EchartsGraph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
-		charts.InitOpts{Width: "1800px", Height: "1080px"})
-
-	gData.EchartsGraph.Add("graph", gData.Nodes, gData.Links,
-		charts.GraphOpts{Layout: "force", Roam: true, Force: charts.GraphForce{Repulsion: 34, Gravity: 0.16}, FocusNodeAdjacency: true},
-		charts.EmphasisOpts{Label: charts.LabelTextOpts{Show: true, Position: "left", Color: "black"}},
-		charts.LineStyleOpts{Width: 1, Color: "#b5b5b5"},
-	)
-
-	err := CreateFinishedGraphFolder()
-	CheckErr(err)
-	file, err := os.Create(fmt.Sprintf("../finishedGraphs/%s.html", gData.SteamID))
-	CheckErr(err)
-
-	gData.EchartsGraph.Render(file)
-}
-
-func RenderTwo(gData *GraphData) {
 	gData.EchartsGraph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 示例图"},
 		charts.InitOpts{Width: "1800px", Height: "1080px"})
 
@@ -333,7 +413,7 @@ func RenderTwo(gData *GraphData) {
 	CheckErr(err)
 
 	gData.EchartsGraph.Render(file)
-	fmt.Println("DONE RENDER 2")
+	fmt.Println("Wrote to file")
 }
 
 func InitGraphing(level, workers int, steamID string) *GraphData {

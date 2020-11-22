@@ -58,7 +58,7 @@ func main() {
 		}
 		return
 	}
-
+	fmt.Printf("Len is %d\n", len(steamIDs))
 	if len(steamIDs) == 1 {
 		worker.InitCrawling(config, steamIDs[0])
 
@@ -68,7 +68,7 @@ func main() {
 	}
 
 	if len(steamIDs) == 2 {
-
+		fmt.Printf("Len is 2\n")
 		worker.InitCrawling(config, steamIDs[0])
 		worker.InitCrawling(config, steamIDs[1])
 
@@ -77,15 +77,35 @@ func main() {
 
 		graph := charts.NewGraph()
 		allNodes := graphing.MergeNodes(StartUserGraphData.Nodes, EndUserGraphData.Nodes)
+
+		// allUsersMap := graphing.MergeUsersMaps(StartUserGraphData.UsersMap, EndUserGraphData.UsersMap)
+		// fmt.Printf("All users map\n")
+		// for key, val := range allUsersMap {
+		// 	fmt.Printf("[%d] -> [%s]\n", key, val)
+		// }
+		// fmt.Printf("First map\n")
+		// for key, val := range StartUserGraphData.UsersMap {
+		// 	fmt.Printf("[%d] -> [%s]\n", key, val)
+		// }
+		// fmt.Printf("Second map\n")
+		// for key, val := range EndUserGraphData.UsersMap {
+		// 	fmt.Printf("[%d] -> [%s]\n", key, val)
+		// }
+
+		allDijkstraGraph, allUsersMap := graphing.MergeDijkstraGraphs(StartUserGraphData.DijkstraGraph, EndUserGraphData.DijkstraGraph, StartUserGraphData.UsersMap, EndUserGraphData.UsersMap)
+
 		graphData := &graphing.GraphData{
 			Nodes:        allNodes,
 			Links:        append(StartUserGraphData.Links, EndUserGraphData.Links...),
 			EchartsGraph: graph,
+
+			ApplyDijkstra: true,
+			UsersMap:      allUsersMap,
+			DijkstraGraph: allDijkstraGraph,
 		}
 
-		// startUsername, err := util.GetUsername(config.APIKeys[0], steamIDs[0])
-
-		graphing.RenderTwo(graphData)
+		graphData.GetDijkstraPath(steamIDs[0], steamIDs[1])
+		graphData.Render()
 		return
 
 	}

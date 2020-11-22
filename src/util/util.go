@@ -221,6 +221,7 @@ func ExtractSteamIDs(args []string) ([]string, error) {
 	for _, arg := range args {
 		if valid := IsValidFormatSteamID(arg); valid {
 			validSteamIDs = append(validSteamIDs, arg)
+			fmt.Printf("%s is valid\n", arg)
 		}
 	}
 	if len(validSteamIDs) == 0 {
