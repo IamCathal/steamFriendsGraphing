@@ -41,7 +41,7 @@ func main() {
 		APIKeys:  apiKeys,
 	}
 
-	fileName := ""
+	urlMap := worker.LoadMappings()
 
 	if len(os.Args) < 1 {
 		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
@@ -62,17 +62,22 @@ func main() {
 	}
 
 	if len(steamIDs) == 1 {
-		fileName = steamIDs[0]
+		os.Setenv("CURRTARGET", steamIDs[0])
 		worker.InitCrawling(config, steamIDs[0])
+		worker.GenerateURL(steamIDs[0], urlMap)
 
 		gData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
-		gData.Render(fileName)
+		gData.Render(urlMap[steamIDs[0]])
 		return
 	}
 
 	if len(steamIDs) == 2 {
-		fileName = "eee"
+		identifier := fmt.Sprintf("%s%s", steamIDs[0], steamIDs[1])
+		worker.GenerateURL(fmt.Sprintf("%s%s", steamIDs[0], steamIDs[1]), urlMap)
+
+		os.Setenv("CURRTARGET", steamIDs[0])
 		worker.InitCrawling(config, steamIDs[0])
+		os.Setenv("CURRTARGET", steamIDs[1])
 		worker.InitCrawling(config, steamIDs[1])
 
 		StartUserGraphData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
@@ -120,7 +125,7 @@ func main() {
 		}
 
 		graphData.Nodes = newNodes
-		graphData.Render(fileName)
+		graphData.Render(urlMap[identifier])
 		return
 	}
 }

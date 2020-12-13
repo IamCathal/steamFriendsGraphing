@@ -32,10 +32,12 @@ func TestMain(m *testing.M) {
 	os.Setenv("testing", "")
 	os.RemoveAll("../testData")
 	os.Mkdir("../testData", 0755)
+	os.Mkdir("../testLogs", 0755)
 
 	code := m.Run()
 
 	os.RemoveAll("../testData")
+	os.RemoveAll("../testLogs")
 	os.Exit(code)
 }
 

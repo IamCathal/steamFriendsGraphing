@@ -13,10 +13,13 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/segmentio/ksuid"
+	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/util"
 )
 
@@ -380,8 +383,10 @@ func LogCall(method, steamID, username, status, statusColor string, startTime in
 	endTime := time.Now().UnixNano() / int64(time.Millisecond)
 	delay := strconv.FormatInt((endTime - startTime), 10)
 
-	fmt.Printf("%s [%s] %s %s%s%s %vms\n", method, steamID, username,
+	logMsg := fmt.Sprintf("%s [%s] %s %s%s%s %vms\n", method, steamID, username,
 		statusColor, status, "\033[0m", delay)
+	logging.SpecialLog(logMsg)
+	fmt.Printf("%s", logMsg)
 }
 
 // WriteToFile writes a user's friendlist to a file for later processing
@@ -489,4 +494,50 @@ func CacheFileExists(steamID string) bool {
 		return false
 	}
 	return true
+}
+
+func LoadMappings() map[string]string {
+	urlMap := make(map[string]string)
+	byteContent, err := ioutil.ReadFile("../config/urlMappings.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	stringContent := string(byteContent)
+
+	if len(stringContent) > 0 {
+		lines := strings.Split(stringContent, "\n")
+
+		for _, line := range lines {
+			splitArr := strings.Split(line, ":")
+			// Last line is just \n
+			if len(splitArr) == 2 {
+				urlMap[splitArr[0]] = splitArr[1]
+			}
+		}
+		return urlMap
+
+	} else {
+		return make(map[string]string)
+	}
+}
+
+func writeMappings(urlMap map[string]string) {
+	file, err := os.OpenFile("../config/urlMappings.txt", os.O_RDWR, 0755)
+	defer file.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	file.Seek(0, 0)
+	for key, _ := range urlMap {
+		_, err = file.WriteString(fmt.Sprintf("%s:%s\n", key, urlMap[key]))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func GenerateURL(input string, urlMap map[string]string) {
+	identifier := ksuid.New()
+	urlMap[input] = identifier.String()
+	writeMappings(urlMap)
 }

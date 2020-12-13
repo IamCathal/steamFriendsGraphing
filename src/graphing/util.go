@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
+	"strings"
 
 	"github.com/go-echarts/go-echarts/charts"
 )
@@ -163,7 +165,10 @@ func CreateFinishedGraphFolder() error {
 // CheckErr is a simple function to replace dozen or so if err != nil statements
 func CheckErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		_, file, line, _ := runtime.Caller(1)
+		path, _ := os.Getwd()
+
+		log.Fatal(fmt.Sprintf(" %s - %s:%d", err, strings.TrimPrefix(file, path), line))
 	}
 }
 

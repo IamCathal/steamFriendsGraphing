@@ -2,6 +2,7 @@ package worker
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"testing"
@@ -19,10 +20,12 @@ func TestMain(m *testing.M) {
 	os.Setenv("testing", "")
 	os.RemoveAll("../testData")
 	os.Mkdir("../testData", 0755)
+	os.Mkdir("../testLogs", 0755)
 
 	code := m.Run()
 
 	os.RemoveAll("../testData")
+	os.RemoveAll("../testLogs")
 	os.Exit(code)
 }
 
@@ -84,7 +87,13 @@ func TestGetFriends(t *testing.T) {
 	}
 
 	for _, testCase := range tests {
-		_, err := GetFriends(testCase.steamID, testCase.APIKey, 1, jobs)
+		os.Setenv("CURRTARGET", testCase.steamID)
+		_, err := os.Create(fmt.Sprintf("../testLogs/%s.txt", testCase.steamID))
+
+		if err != nil {
+			log.Fatal(fmt.Sprintf("eee %s", err))
+		}
+		_, err = GetFriends(testCase.steamID, testCase.APIKey, 1, jobs)
 		if err != nil {
 			if !testCase.shouldFail {
 				t.Error("Error:", err,
