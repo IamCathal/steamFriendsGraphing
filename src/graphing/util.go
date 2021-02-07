@@ -150,10 +150,9 @@ func NodeExistsInt(ID int, nodeMap map[int]bool) bool {
 // CreateUserDataFolder creates a folder for holding cache.
 // Can either be userData for regular use or testData when running under github actions.
 func CreateFinishedGraphFolder() error {
-
-	_, err := os.Stat("../finishedGraphs")
+	_, err := os.Stat(fmt.Sprintf("%s/../../finishedGraphs", os.Getenv("BWD")))
 	if os.IsNotExist(err) {
-		os.Mkdir("../finishedGraphs", 0755)
+		os.Mkdir(fmt.Sprintf("%s/../../finishedGraphs", os.Getenv("BWD")), 0755)
 		return nil
 	}
 	if err != nil {

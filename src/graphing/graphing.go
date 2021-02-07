@@ -323,12 +323,10 @@ func (gData *GraphData) Render(fileName string) {
 		charts.EmphasisOpts{Label: charts.LabelTextOpts{Show: true, Position: "left", Color: "black"}},
 		charts.LineStyleOpts{Width: 1, Color: "#b5b5b5"},
 	)
-
 	err := CreateFinishedGraphFolder()
 	CheckErr(err)
-	file, err := os.Create(fmt.Sprintf("../finishedGraphs/%s.html", fileName))
+	file, err := os.Create(fmt.Sprintf("%s.html", fileName))
 	CheckErr(err)
-
 	gData.EchartsGraph.Render(file)
 	fmt.Println("Wrote to " + fileName + ".html file")
 }

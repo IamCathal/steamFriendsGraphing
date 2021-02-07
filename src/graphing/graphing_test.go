@@ -1,6 +1,7 @@
 package graphing
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -30,6 +31,10 @@ func getAPIKeysForTesting() []string {
 
 func TestMain(m *testing.M) {
 	os.Setenv("testing", "")
+	path, err := os.Getwd()
+	CheckErr(err)
+	os.Setenv("BWD", path)
+
 	os.RemoveAll("../testData")
 	os.Mkdir("../testData", 0755)
 	os.Mkdir("../testLogs", 0755)
@@ -80,4 +85,86 @@ func TestMergeNodes(t *testing.T) {
 			t.Errorf("Node %d has %s instead of %s", i, allNodes[i].Name, name)
 		}
 	}
+}
+
+func TestNodeExistsInt(t *testing.T) {
+	targetID := 6
+	nodeMap := make(map[int]bool, 0)
+
+	nodeMap[targetID] = true
+
+	if exists := NodeExistsInt(6, nodeMap); !exists {
+		t.Errorf("Failed to find ID %d in %+v", targetID, nodeMap)
+	}
+	targetID = 74
+	if exists := NodeExistsInt(targetID, nodeMap); exists {
+		t.Errorf("Found non existant ID %d in %+v", targetID, nodeMap)
+	}
+}
+
+func TestMergeUsersMaps(t *testing.T) {
+	startUsersMap := make(map[int]string, 0)
+	endUsersMap := make(map[int]string, 0)
+
+	startUsersMap[0] = "Rob Pike"
+	startUsersMap[1] = "Robert Griesemer"
+	startUsersMap[2] = "Ken Thompson"
+
+	endUsersMap[0] = "Guido van Rossum"
+	endUsersMap[1] = "Rob Pike"
+	endUsersMap[2] = "Yukihiro Matsumoto"
+
+	mergedUsersMap := mergeUsersMaps(startUsersMap, endUsersMap)
+	if len(mergedUsersMap) != 5 {
+		t.Errorf("Failed to merge maps successfully\nstartUsersMap:\t%+v\nendUsersMap:\t%+v\nmergedUsersMap:\t%+v",
+			startUsersMap, endUsersMap, mergedUsersMap)
+	}
+}
+
+// func TestMergeDijkstraGraphs(t *testing.T) {
+// 	startUsersMap := make(map[int]string, 0)
+// 	endUsersMap := make(map[int]string, 0)
+
+// 	startUsersMap[0] = "Rob Pike"
+// 	startUsersMap[1] = "Robert Griesemer"
+// 	startUsersMap[2] = "Ken Thompson"
+
+// 	endUsersMap[0] = "Guido van Rossum"
+// 	endUsersMap[1] = "Rob Pike"
+// 	endUsersMap[2] = "Yukihiro Matsumoto"
+
+// }
+
+func TestCreateFinishedGraphs(t *testing.T) {
+	if err := CreateFinishedGraphFolder(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRender(t *testing.T) {
+	graph := charts.NewGraph()
+	nodes := make([]charts.GraphNode, 0)
+	links := make([]charts.GraphLink, 0)
+
+	nodes = append(nodes, charts.GraphNode{Name: "Rob Pike"})
+	nodes = append(nodes, charts.GraphNode{Name: "Robert Griesemer"})
+	nodes = append(nodes, charts.GraphNode{Name: "Ken Thompson"})
+
+	links = append(links, charts.GraphLink{Source: "Rob Pike", Target: "Ken Thompson"})
+	links = append(links, charts.GraphLink{Source: "Ken Thompson", Target: "Robert Griesemer"})
+
+	graph.Add("graph", nodes, links,
+		charts.GraphOpts{Layout: "force", Roam: true, Force: charts.GraphForce{Repulsion: 34, Gravity: 0.16}, FocusNodeAdjacency: true},
+		charts.EmphasisOpts{Label: charts.LabelTextOpts{Show: true, Position: "left", Color: "white"}},
+		charts.LineStyleOpts{Width: 1, Color: "#b5b5b5"},
+	)
+
+	graphData := &GraphData{
+		Nodes:        nodes,
+		Links:        links,
+		EchartsGraph: graph,
+	}
+
+	graphData.Render(fmt.Sprintf("%s/../../finishedGraphs/testerGraph2", os.Getenv("BWD")))
+	os.Remove(fmt.Sprintf("%s/../../finishedGraphs/testerGraph2.html", os.Getenv("BWD")))
 }

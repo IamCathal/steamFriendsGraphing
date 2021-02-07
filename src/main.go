@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-
 	level := flag.Int("level", 2, "Level of friends you want to crawl. 2 is your friends, 3 is mutual friends etc")
 	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
 	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
@@ -22,13 +21,14 @@ func main() {
 	httpserver := flag.Bool("httpserver", false, "Run the application as a HTTP server")
 	flag.Parse()
 
+	util.SetBaseWorkingDirectory()
+
 	if *httpserver {
 		server.RunServer("8080")
 		return
 	}
 	apiKeys, err := util.GetAPIKeys()
 	util.CheckErr(err)
-
 	steamIDs, err := util.ExtractSteamIDs(os.Args)
 	if err != nil {
 		log.Fatal(err)
@@ -60,14 +60,12 @@ func main() {
 		}
 		return
 	}
-
 	if len(steamIDs) == 1 {
 		os.Setenv("CURRTARGET", steamIDs[0])
 		worker.InitCrawling(config, steamIDs[0])
 		worker.GenerateURL(steamIDs[0], urlMap)
-
 		gData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
-		gData.Render(urlMap[steamIDs[0]])
+		gData.Render(fmt.Sprintf("%s/../finishedGraphs/%s", os.Getenv("BWD"), urlMap[steamIDs[0]]))
 		return
 	}
 
