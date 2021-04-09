@@ -24,7 +24,7 @@ var (
 
 type Controller struct {}
 
-type controllerInterface interface {
+type ControllerInterface interface {
 	CallPlayerSummaryAPI(steamID, apiKey string) (UserStatsStruct, error)
 	CallIsAPIKeyValidAPI(apiKeys string) string
 }
@@ -44,7 +44,7 @@ func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStat
 }
 
 // GetPlayerSummary gets a player summary through the steam web API
-func GetPlayerSummary(cntr controllerInterface, steamID, apiKey string) (UserStatsStruct, error) {
+func GetPlayerSummary(cntr ControllerInterface, steamID, apiKey string) (UserStatsStruct, error) {
 	userStatsObj, err := cntr.CallPlayerSummaryAPI(steamID, apiKey)
 	if err != nil {
 		return userStatsObj, err
@@ -59,7 +59,7 @@ func GetPlayerSummary(cntr controllerInterface, steamID, apiKey string) (UserSta
 
 // GetUsername gets a username from a given steamID by querying the 
 // steam web API
-func GetUsername(cntr controllerInterface, apiKey, steamID string) (string, error) {
+func GetUsername(cntr ControllerInterface, apiKey, steamID string) (string, error) {
 	if valid := IsValidFormatSteamID(steamID); !valid {
 		return "", fmt.Errorf("invalid steamID format: %s", steamID)
 	}
@@ -70,7 +70,7 @@ func GetUsername(cntr controllerInterface, apiKey, steamID string) (string, erro
 
 // GetUserDetails gets profile details such as: steamID, username, time created
 // profile URL and avatar URL
-func GetUserDetails(cntr controllerInterface, apiKey, steamID string) (map[string]string, error) {
+func GetUserDetails(cntr ControllerInterface, apiKey, steamID string) (map[string]string, error) {
 	userStatsObj, err := GetPlayerSummary(cntr, steamID, apiKey)
 	if err != nil {
 		return nil, err
@@ -150,7 +150,7 @@ func (control Controller) CallIsAPIKeyValidAPI(apiKey string) string {
 }
 
 // CheckAPIKeys checks if a given list of API keys is valid
-func ALTCheckAPIKeys(cntr controllerInterface, apiKeys []string) {
+func ALTCheckAPIKeys(cntr ControllerInterface, apiKeys []string) {
 	for i, apiKey := range apiKeys {
 		response := cntr.CallIsAPIKeyValidAPI(apiKey)
 

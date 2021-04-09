@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,7 +13,41 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/steamFriendsGraphing/util"
 )
+
+var (
+	expectedGetPlayerSummaryUser util.UserStatsStruct 
+)
+
+type MockInterface struct {}
+
+func setupStubs() {
+	expectedGetPlayerSummaryUser = util.UserStatsStruct{
+		Response: util.Response{
+			Players: []util.Player{
+				util.Player {
+					Steamid: "76561198076045001",
+					Timecreated: 0,
+					Personaname: "expected pesrsona name",
+				},
+			},
+		},
+	}
+}
+
+func (m *MockInterface) CallPlayerSummaryAPI(steamID, apiKey string) (util.UserStatsStruct, error) {
+	return expectedGetPlayerSummaryUser, nil
+}
+
+func (m *MockInterface) CallIsAPIKeyValidAPI(apiKey string) string {
+	return "valid response"
+}
+
+func failTest(message string, t *testing.T) {
+	failMsg := fmt.Sprintf("%s: %s", t.Name(), message)
+	t.Errorf(failMsg)
+}
 
 func readAndUnmarshal(res *httptest.ResponseRecorder) (basicResponse, error) {
 	resJSON := basicResponse{}
@@ -25,6 +60,19 @@ func readAndUnmarshal(res *httptest.ResponseRecorder) (basicResponse, error) {
 		return resJSON, err
 	}
 	return resJSON, nil
+}
+
+func TestMain(m *testing.M) {
+	path, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	os.Setenv("BWD", fmt.Sprintf("%s/../", path))
+
+	setupStubs()
+
+	code := m.Run()
+	os.Exit(code)
 }
 
 func initRouter() *mux.Router {
@@ -45,21 +93,23 @@ func TestAPIStatus(t *testing.T) {
 
 	resJSON, err := readAndUnmarshal(res)
 	if err != nil {
-		t.Error("Error reading response")
+		failTest("Error reading response", t)
 	}
 
 	if resJSON.Status != 200 || resJSON.Body != "API is operational" {
-		t.Errorf("Root endpoint not operational")
+		failTest("Root endpoint not operational", t)
 	}
 }
 
 func TestStatLookup(t *testing.T) {
+	cntr := &MockInterface{}
+	setController(cntr)
 	reqBody, err := json.Marshal(map[string]string{
 		"steamID0": "76561197960271945",
 		"statMode": "true",
 	})
 	if err != nil {
-		t.Error(err)
+		failTest(err.Error(), t)
 	}
 
 	req, _ := http.NewRequest("POST", "/statlookup", bytes.NewBuffer(reqBody))
@@ -68,11 +118,11 @@ func TestStatLookup(t *testing.T) {
 
 	resJSON, err := readAndUnmarshal(res)
 	if err != nil {
-		t.Error("Error reading response")
+		failTest("Error unmarshaling response", t)
 	}
 
 	if resJSON.Status != 200 {
-		t.Errorf("Statlookup endpoint not operational")
+		failTest("expect 200 respons", t)
 	}
 }
 
@@ -85,7 +135,7 @@ func TestCrawl(t *testing.T) {
 		"statmode": "true",
 	})
 	if err != nil {
-		t.Error(err)
+		failTest(err.Error(), t)
 	}
 
 	req, _ := http.NewRequest("POST", "/crawl", bytes.NewBuffer(reqBody))
@@ -94,7 +144,7 @@ func TestCrawl(t *testing.T) {
 
 	resJSON, err := readAndUnmarshal(res)
 	if err != nil {
-		t.Error("Error reading response")
+		failTest("Error reading response",t)
 	}
 
 	if resJSON.Status != 200 {
@@ -108,7 +158,7 @@ func TestServerRun(t *testing.T) {
 	// mess anything else up
 	fmt.Printf("\n\n")
 	go RunServer("8085")
-	time.Sleep(2 * time.Second)
+	time.Sleep(50 * time.Millisecond)
 	fmt.Printf("\n\n")
 	os.Exit(0)
 }

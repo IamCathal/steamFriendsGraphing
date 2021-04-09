@@ -19,7 +19,12 @@ var (
 	// middlewareBlacklist indicates whether
 	// a url is to be ignored by the middleware
 	middlewareBlackList map[string]bool
+	cntr util.ControllerInterface
 )
+
+func setController(controller util.ControllerInterface) {
+	cntr = controller
+}
 
 func CrawlMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,12 +63,11 @@ func HomeHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(res)
-	LogCall(req.Method, req.URL.Path, "200", vars["startTime"], false)
+	LogCall(req, "200", vars["startTime"], false)
 }
 
 func statLookup(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	cntr := util.Controller{}
 	apiKeys, err := util.GetAPIKeys()
 	util.CheckErr(err)
 
@@ -78,7 +82,7 @@ func statLookup(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(res)
-	LogCall(req.Method, req.URL.Path, "200", vars["startTime"], false)
+	LogCall(req, "200", vars["startTime"], false)
 }
 
 func crawl(w http.ResponseWriter, req *http.Request) {
@@ -95,7 +99,7 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(res)
-	LogCall(req.Method, req.URL.Path, "200", vars["startTime"], false)
+	LogCall(req, "200", vars["startTime"], false)
 }
 
 func status(w http.ResponseWriter, req *http.Request) {
@@ -110,7 +114,7 @@ func status(w http.ResponseWriter, req *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(jsonObj))
-	LogCall(req.Method, req.URL.Path, "200", vars["startTime"], false)
+	LogCall(req, "200", vars["startTime"], false)
 }
 
 func RunServer(port string) {

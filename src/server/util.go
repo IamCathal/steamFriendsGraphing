@@ -37,7 +37,7 @@ func inMiddlewareBlacklist(endpoint string) bool {
 }
 
 // LogCall logs a call to the console with it's details
-func LogCall(method, endpoint, status, startTimeString string, cached bool) {
+func LogCall(req *http.Request, status string, startTimeString string, cached bool) {
 	statusColor := "\033[0m"
 	cacheString := ""
 
@@ -59,7 +59,8 @@ func LogCall(method, endpoint, status, startTimeString string, cached bool) {
 	} else {
 		statusColor = "\033[31m"
 	}
-	fmt.Printf("[%s] %s%s %s %s%s%s %dms\n", time.Now().Format("02-Jan-2006 15:04:05"), cacheString, method, endpoint, statusColor, status, "\033[0m", delay)
+	fmt.Printf("[%s] %s%s %s %s%s%s %dms\n", time.Now().Format("02-Jan-2006 15:04:05"), 
+		cacheString, req.Method, req.URL.Path, statusColor, status, "\033[0m", delay)
 }
 
 // sendErrorResponse sends an error response
@@ -71,8 +72,7 @@ func sendErrorResponse(w http.ResponseWriter, r *http.Request, httpStatus int, s
 		Body:   errorString,
 	}
 	json.NewEncoder(w).Encode(res)
-	LogCall(r.Method, r.URL.Path, strconv.Itoa(httpStatus), startTime, false)
-	return
+	LogCall(r, strconv.Itoa(httpStatus), startTime, false)
 }
 
 // DecodeBody takes a typical request and assigns the configuration given
