@@ -63,7 +63,7 @@ func HomeHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(res)
-	LogCall(req, "200", vars["startTime"], false)
+	LogCall(req, http.StatusOK, vars["startTime"], false)
 }
 
 func statLookup(w http.ResponseWriter, req *http.Request) {
@@ -82,7 +82,7 @@ func statLookup(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(res)
-	LogCall(req, "200", vars["startTime"], false)
+	LogCall(req, http.StatusOK, vars["startTime"], false)
 }
 
 func crawl(w http.ResponseWriter, req *http.Request) {
@@ -99,7 +99,7 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(res)
-	LogCall(req, "200", vars["startTime"], false)
+	LogCall(req, http.StatusOK, vars["startTime"], false)
 }
 
 func status(w http.ResponseWriter, req *http.Request) {
@@ -114,7 +114,7 @@ func status(w http.ResponseWriter, req *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(jsonObj))
-	LogCall(req, "200", vars["startTime"], false)
+	LogCall(req, http.StatusOK, vars["startTime"], false)
 }
 
 func RunServer(port string) {
