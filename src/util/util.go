@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -23,25 +22,60 @@ var (
 	White = "\033[0;37m"
 )
 
-// GetUsername gets a username from a given steamID by querying the 
-// steam web API
-func GetUsername(apiKey, steamID string) (string, error) {
-	if valid := IsValidFormatSteamID(steamID); !valid {
-		return "", fmt.Errorf("invalid steamID format")
+type Controller struct {}
+
+type controllerInterface interface {
+	CallPlayerSummaryAPI(steamID, apiKey string) (UserStatsStruct, error)
+	CallIsAPIKeyValidAPI(apiKeys string) string
+}
+
+func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStatsStruct, error) {
+	var userStatsObj UserStatsStruct
+	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
+		apiKey, steamID)
+	res, err := GetAndRead(targetURL)
+	if err != nil {
+		return userStatsObj, err
+	}
+	
+	fmt.Println("REMOTE REMOTE REMOTE")
+	json.Unmarshal(res, &userStatsObj)
+	return userStatsObj, nil
+}
+
+// GetPlayerSummary gets a player summary through the steam web API
+func GetPlayerSummary(cntr controllerInterface, steamID, apiKey string) (UserStatsStruct, error) {
+	userStatsObj, err := cntr.CallPlayerSummaryAPI(steamID, apiKey)
+	if err != nil {
+		return userStatsObj, err
 	}
 
-	userStatsObj, err := GetPlayerSummary(steamID, apiKey)
+	if len(userStatsObj.Response.Players) == 0 {
+		return userStatsObj, fmt.Errorf("invalid steamID %s given", steamID)
+	}
+	
+	return userStatsObj, nil
+}
+
+// GetUsername gets a username from a given steamID by querying the 
+// steam web API
+func GetUsername(cntr controllerInterface, apiKey, steamID string) (string, error) {
+	if valid := IsValidFormatSteamID(steamID); !valid {
+		return "", fmt.Errorf("invalid steamID format: %s", steamID)
+	}
+	
+	userStatsObj, err := GetPlayerSummary(cntr, steamID, apiKey)
 	return userStatsObj.Response.Players[0].Personaname, err
 }
 
 // GetUserDetails gets profile details such as: steamID, username, time created
 // profile URL and avatar URL
-func GetUserDetails(apiKey, steamID string) (map[string]string, error) {
-	userStatsObj, err := GetPlayerSummary(steamID, apiKey)
+func GetUserDetails(cntr controllerInterface, apiKey, steamID string) (map[string]string, error) {
+	userStatsObj, err := GetPlayerSummary(cntr, steamID, apiKey)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	resMap := make(map[string]string)
 	resMap["SteamID"] = userStatsObj.Response.Players[0].Steamid
 	resMap["Username"] = userStatsObj.Response.Players[0].Personaname
@@ -75,7 +109,7 @@ func CheckErr(err error) {
 	if err != nil {
 		_, file, line, _ := runtime.Caller(1)
 		path, _ := os.Getwd()
-		log.Fatal(fmt.Sprintf(" %s - %s:%d", err, strings.TrimPrefix(file, path), line))
+		log.Fatal(fmt.Sprintf("%s:%d ",  strings.TrimPrefix(file, path), line), err)
 	}
 }
 
@@ -91,48 +125,74 @@ func IsValidFormatSteamID(steamID string) bool {
 	return match
 }
 
-// IsValidSteamID checks if a steamID is valid by calling the API
-func IsValidSteamID(body string) bool {
+// IsValidAPIResponseForSteamId checks if a steamID is valid by calling the API
+func IsValidAPIResponseForSteamId(body string) bool {
 	match, _ := regexp.MatchString("(Internal Server Error)+", body)
-	if match {
-		return false
-	}
-	return true
+	return !match
 }
 
-// IsValidAPIKey checks if the API key is invalid based off of the API
+// IsValidResponseForAPIKey checks if the API key is invalid based off of the API
 // response
-func IsValidAPIKey(body string) bool {
+func IsValidResponseForAPIKey(body string) bool {
 	match, _ := regexp.MatchString("(Forbidden)+", body)
-	if match {
-		return false
-	}
-	return true
+	return !match
 }
 
-// CheckAPIKeys checks if the API keys in APIKEYS.txt are all valid
-func CheckAPIKeys(apiKeys []string) {
+func (control Controller) CallIsAPIKeyValidAPI(apiKey string) string {
+	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
+	res, err := http.Get(targetURL)
+	CheckErr(err)
+
+	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	CheckErr(err)
+	return string(body)
+}
+
+// CheckAPIKeys checks if a given list of API keys is valid
+func ALTCheckAPIKeys(cntr controllerInterface, apiKeys []string) {
 	for i, apiKey := range apiKeys {
-		targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
+		response := cntr.CallIsAPIKeyValidAPI(apiKey)
 
 		// Wouldn't want to log API keys to console if using
 		// the github actions testing environment
-		if exists := IsEnvVarSet("testing"); exists {
+		if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
 			apiKey = "REDACTED"
 		}
 		fmt.Printf("[%d] Testing %s ...", i, apiKey)
 
+		if valid := IsValidResponseForAPIKey(response); !valid {
+			ThrowErr(fmt.Errorf("invalid api key %s", apiKey))
+		}
+
+		fmt.Printf("\r[%d] Testing %s ... %svalid!%s\n", i, apiKey, Green, White)
+	}
+	fmt.Printf("All API keys are valid!\n")
+}
+
+// CheckAPIKeys checks if a given list of API keys is valid
+func CheckAPIKeys(apiKeys []string) {
+	for i, apiKey := range apiKeys {
+		targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
 		res, err := http.Get(targetURL)
 		CheckErr(err)
 		body, err := ioutil.ReadAll(res.Body)
 		defer res.Body.Close()
 		CheckErr(err)
 
-		if valid := IsValidAPIKey(string(body)); !valid {
-			log.Fatalf("invalid api key %s", apiKey)
+		// Wouldn't want to log API keys to console if using
+		// the github actions testing environment
+		if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
+			apiKey = "REDACTED"
 		}
+		fmt.Printf("[%d] Testing %s ...", i, apiKey)
+
+		if valid := IsValidResponseForAPIKey(string(body)); !valid {
+			ThrowErr(fmt.Errorf("invalid api key %s", apiKey))
+		}
+
 		fmt.Printf("\r[%d] Testing %s ... %svalid!%s\n", i, apiKey, Green, White)
-		time.Sleep(time.Duration(rand.Intn(1000)+100) * time.Millisecond)
+		// time.Sleep(time.Duration(500) * time.Millisecond)
 	}
 	fmt.Printf("All API keys are valid!\n")
 }
@@ -154,7 +214,7 @@ func GetAPIKeys() ([]string, error) {
 	}
 
 	// APIKEYS.txt MUST be in the root directory of the project
-	APIKeysLocation := fmt.Sprintf("%s../APIKEYS.txt", os.Getenv("BWD"))
+	APIKeysLocation := fmt.Sprintf("%s/../APIKEYS.txt", os.Getenv("BWD"))
 
 	file, err := os.Open(APIKeysLocation)
 	if err != nil {
@@ -200,30 +260,22 @@ func ExtractSteamIDs(args []string) ([]string, error) {
 	return validSteamIDs, nil
 }
 
-// GetPlayerSummary gets a player summary through the steam web API
-func GetPlayerSummary(steamID, apiKey string) (UserStatsStruct, error) {
-	var userStatsObj UserStatsStruct
-	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
-		apiKey, steamID)
-	res, err := http.Get(targetURL)
-	CheckErr(err)
-
-	body, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	CheckErr(err)
-
-	json.Unmarshal(body, &userStatsObj)
-
-	if len(userStatsObj.Response.Players) == 0 {
-		err := fmt.Errorf("invalid steamID %s given", steamID)
-		return userStatsObj, err
-	}
-
-	return userStatsObj, nil
-}
-
 func SetBaseWorkingDirectory() {
 	path, err := os.Getwd()
 	CheckErr(err)
 	os.Setenv("BWD", path)
+}
+
+func GetAndRead(URL string) ([]byte, error) {
+	res, err := http.Get(URL)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return []byte{}, err
+	}
+	return body, nil
 }
