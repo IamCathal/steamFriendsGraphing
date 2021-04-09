@@ -63,11 +63,11 @@ func HomeHandler(w http.ResponseWriter, req *http.Request) {
 
 func statLookup(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-
+	cntr := util.Controller{}
 	apiKeys, err := util.GetAPIKeys()
 	util.CheckErr(err)
 
-	resultMap, err := util.GetUserDetails(apiKeys[0], vars["steamID0"])
+	resultMap, err := util.GetUserDetails(cntr, apiKeys[0], vars["steamID0"])
 	util.CheckErr(err)
 
 	res := basicResponse{

@@ -150,6 +150,7 @@ func Worker(jobs <-chan JobsStruct, results chan<- JobsStruct, cfg *WorkerConfig
 
 // GetFriends returns the list of friends for a given user and caches results if requested
 func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util.FriendsStruct, error) {
+	cntr := util.Controller{}
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 
 	// If the cache exists and the env var to disable serving from cache is not set
@@ -181,13 +182,13 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util
 	json.Unmarshal(body, &friendsObj)
 
 	// If the HTTP response has error messages in it handle them accordingly
-	if valid := util.IsValidSteamID(string(body)); !valid {
+	if valid := util.IsValidAPIResponseForSteamId(string(body)); !valid {
 		LogCall("GET", steamID, friendsObj.Username, "400", util.Red, startTime)
 		var temp util.FriendsStruct
 		return temp, errors.New("Invalid steamID given")
 	}
 
-	if valid := util.IsValidAPIKey(string(body)); !valid {
+	if valid := util.IsValidResponseForAPIKey(string(body)); !valid {
 		LogCall("GET", steamID, "Invalid API key", "403", util.Red, startTime)
 		var temp util.FriendsStruct
 		return temp, fmt.Errorf("invalid api key: %s", apiKey)
@@ -284,7 +285,7 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util
 
 	}
 
-	username, err := util.GetUsername(apiKey, steamID)
+	username, err := util.GetUsername(cntr, apiKey, steamID)
 	util.CheckErr(err)
 	friendsObj.Username = username
 
@@ -391,13 +392,32 @@ func LogCall(method, steamID, username, status, statusColor string, startTime in
 
 // WriteToFile writes a user's friendlist to a file for later processing
 func WriteToFile(apiKey, steamID string, friends util.FriendsStruct) {
-	cacheFolder := "userData"
+	cacheFolder := ""
 	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
+		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
+	} else {
+		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
 	}
 
 	if existing := CacheFileExists(steamID); !existing {
-		file, err := os.Create(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
+		file, err := os.Create(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
+		// if err != nil {
+		// 	_, err := os.Stat("../testData")
+		// 	if os.IsNotExist(err) {
+		// 		fmt.Println(":: ../testData [WorkerFile] DOES NOT EXIST -------------------")
+		// 		files, err := ioutil.ReadDir("../")
+		// 		if err != nil {
+		// 			log.Fatal(err)
+		// 		}
+		// 		fmt.Println("THE FILES IN ABOVE DIR")
+		// 		for _, f := range files {
+		// 			fmt.Println(f.Name())
+		// 		}
+		// 	} else {
+		// 		fmt.Println(":: ../testData [WorkerFile] DOES EXIST +++++++++++++++++++++++")
+		// 	}
+
+		// }
 		util.CheckErr(err)
 		defer file.Close()
 
@@ -413,13 +433,15 @@ func WriteToFile(apiKey, steamID string, friends util.FriendsStruct) {
 // GetCache gets a user's cached records if it exists
 func GetCache(steamID string) (util.FriendsStruct, error) {
 	var temp util.FriendsStruct
-	cacheFolder := "userData"
+	cacheFolder := ""
 	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
+		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
+	} else {
+		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
 	}
 
 	if exists := CacheFileExists(steamID); exists {
-		file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
+		file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		defer file.Close()
 		if err != nil {
 			log.Fatal(err)
@@ -445,13 +467,15 @@ func GetCache(steamID string) (util.FriendsStruct, error) {
 // e.g 76561198063271448 -> moose
 func GetUsernameFromCacheFile(steamID string) (string, error) {
 	var temp util.FriendsStruct
-	cacheFolder := "userData"
+	cacheFolder := ""
 	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
+		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
+	} else {
+		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
 	}
 
 	if exists := CacheFileExists(steamID); exists {
-		file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
+		file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		defer file.Close()
 		if err != nil {
 			return "", err
@@ -484,12 +508,14 @@ func IsEnvVarSet(envvar string) bool {
 
 // CacheFileExists checks whether a given cached file exists
 func CacheFileExists(steamID string) bool {
-	cacheFolder := "userData"
-	if exists := IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
+	cacheFolder := ""
+	if exists := util.IsEnvVarSet("testing"); exists {
+		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
+	} else {
+		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
 	}
 
-	_, err := os.Stat(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
+	_, err := os.Stat(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 	if os.IsNotExist(err) {
 		return false
 	}
@@ -498,7 +524,7 @@ func CacheFileExists(steamID string) bool {
 
 func LoadMappings() map[string]string {
 	urlMap := make(map[string]string)
-	byteContent, err := ioutil.ReadFile("../config/urlMappings.txt")
+	byteContent, err := ioutil.ReadFile(fmt.Sprintf("%s/../config/urlMappings.txt", os.Getenv("BWD")))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -522,7 +548,7 @@ func LoadMappings() map[string]string {
 }
 
 func writeMappings(urlMap map[string]string) {
-	file, err := os.OpenFile("../config/urlMappings.txt", os.O_RDWR, 0755)
+	file, err := os.OpenFile(fmt.Sprintf("%s/../config/urlMappings.txt", os.Getenv("BWD")), os.O_RDWR, 0755)
 	defer file.Close()
 	if err != nil {
 		log.Fatal(err)
