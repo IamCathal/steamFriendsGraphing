@@ -48,9 +48,11 @@ func main() {
 		return
 	}
 
+	cntr := util.Controller{}
+
 	if config.StatMode {
 		for _, steamID := range steamIDs {
-			resMap, err := util.GetUserDetails(config.APIKeys[0], steamID)
+			resMap, err := util.GetUserDetails(cntr, config.APIKeys[0], steamID)
 			util.CheckErr(err)
 
 			for k, v := range resMap {
