@@ -18,15 +18,47 @@ import (
 
 var (
 	Green = "\033[32m"
-	Red = "\033[31m"
+	Red   = "\033[31m"
 	White = "\033[0;37m"
 )
 
-type Controller struct {}
+type Controller struct{}
 
 type ControllerInterface interface {
 	CallPlayerSummaryAPI(steamID, apiKey string) (UserStatsStruct, error)
 	CallIsAPIKeyValidAPI(apiKeys string) string
+	CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error)
+
+	FileExists(steamID string) bool
+}
+
+func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error) {
+	var friendsObj FriendsStruct
+	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", url.QueryEscape(apiKey), url.QueryEscape(steamID))
+	res, err := http.Get(targetURL)
+	if err != nil {
+		return friendsObj, err
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return friendsObj, err
+	}
+
+	// If the HTTP response has error messages in it handle them accordingly
+	if valid := IsValidAPIResponseForSteamId(string(body)); !valid {
+		var temp FriendsStruct
+		return temp, fmt.Errorf("invalid steamID %s given", steamID)
+	}
+
+	if valid := IsValidResponseForAPIKey(string(body)); !valid {
+		var temp FriendsStruct
+		return temp, fmt.Errorf("invalid api key: %s", apiKey)
+	}
+
+	json.Unmarshal(body, &friendsObj)
+	return friendsObj, nil
 }
 
 func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStatsStruct, error) {
@@ -37,10 +69,25 @@ func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStat
 	if err != nil {
 		return userStatsObj, err
 	}
-	
+
 	fmt.Println("REMOTE REMOTE REMOTE")
 	json.Unmarshal(res, &userStatsObj)
 	return userStatsObj, nil
+}
+
+func (control Controller) FileExists(steamID string) bool {
+	cacheFolder := ""
+	if exists := IsEnvVarSet("testing"); exists {
+		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
+	} else {
+		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
+	}
+
+	_, err := os.Stat(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
 
 // GetPlayerSummary gets a player summary through the steam web API
@@ -53,17 +100,16 @@ func GetPlayerSummary(cntr ControllerInterface, steamID, apiKey string) (UserSta
 	if len(userStatsObj.Response.Players) == 0 {
 		return userStatsObj, fmt.Errorf("invalid steamID %s given", steamID)
 	}
-	
+
 	return userStatsObj, nil
 }
 
-// GetUsername gets a username from a given steamID by querying the 
+// GetUsername gets a username from a given steamID by querying the
 // steam web API
 func GetUsername(cntr ControllerInterface, apiKey, steamID string) (string, error) {
 	if valid := IsValidFormatSteamID(steamID); !valid {
 		return "", fmt.Errorf("invalid steamID format: %s", steamID)
 	}
-	
 	userStatsObj, err := GetPlayerSummary(cntr, steamID, apiKey)
 	return userStatsObj.Response.Players[0].Personaname, err
 }
@@ -100,7 +146,7 @@ func CreateUserDataFolder() error {
 		err = os.Mkdir(cacheFolder, 0755)
 		CheckErr(err)
 	}
-	
+
 	return nil
 }
 
@@ -109,7 +155,7 @@ func CheckErr(err error) {
 	if err != nil {
 		_, file, line, _ := runtime.Caller(1)
 		path, _ := os.Getwd()
-		log.Fatal(fmt.Sprintf("%s:%d ",  strings.TrimPrefix(file, path), line), err)
+		log.Fatal(fmt.Sprintf("%s:%d ", strings.TrimPrefix(file, path), line), err)
 	}
 }
 
@@ -150,7 +196,7 @@ func (control Controller) CallIsAPIKeyValidAPI(apiKey string) string {
 }
 
 // CheckAPIKeys checks if a given list of API keys is valid
-func ALTCheckAPIKeys(cntr ControllerInterface, apiKeys []string) {
+func CheckAPIKeys(cntr ControllerInterface, apiKeys []string) {
 	for i, apiKey := range apiKeys {
 		response := cntr.CallIsAPIKeyValidAPI(apiKey)
 
@@ -166,33 +212,6 @@ func ALTCheckAPIKeys(cntr ControllerInterface, apiKeys []string) {
 		}
 
 		fmt.Printf("\r[%d] Testing %s ... %svalid!%s\n", i, apiKey, Green, White)
-	}
-	fmt.Printf("All API keys are valid!\n")
-}
-
-// CheckAPIKeys checks if a given list of API keys is valid
-func CheckAPIKeys(apiKeys []string) {
-	for i, apiKey := range apiKeys {
-		targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
-		res, err := http.Get(targetURL)
-		CheckErr(err)
-		body, err := ioutil.ReadAll(res.Body)
-		defer res.Body.Close()
-		CheckErr(err)
-
-		// Wouldn't want to log API keys to console if using
-		// the github actions testing environment
-		if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
-			apiKey = "REDACTED"
-		}
-		fmt.Printf("[%d] Testing %s ...", i, apiKey)
-
-		if valid := IsValidResponseForAPIKey(string(body)); !valid {
-			ThrowErr(fmt.Errorf("invalid api key %s", apiKey))
-		}
-
-		fmt.Printf("\r[%d] Testing %s ... %svalid!%s\n", i, apiKey, Green, White)
-		// time.Sleep(time.Duration(500) * time.Millisecond)
 	}
 	fmt.Printf("All API keys are valid!\n")
 }
@@ -218,13 +237,7 @@ func GetAPIKeys() ([]string, error) {
 
 	file, err := os.Open(APIKeysLocation)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("%s../APIKEYS.txt", os.Getenv("BWD")))
-		CheckErr(errors.New("No APIKEYS.txt file found"))
-		// Check again in the parent's parent directory if invoked by a test
-		// file, err = os.Open(fmt.Sprintf("%s", APIKeysLocation))
-		// if err != nil {
-		// 	CheckErr(errors.New("No APIKEYS.txt file found"))
-		// }
+		CheckErr(errors.New("no APIKEYS.txt file found"))
 	}
 	defer file.Close()
 
@@ -236,14 +249,14 @@ func GetAPIKeys() ([]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, errors.New("Error reading APIKEYS.txt")
+		return nil, errors.New("error reading APIKEYS.txt")
 	}
 
 	if len(apiKeys) > 0 {
 		return apiKeys, nil
 	}
 	// APIKeys.txt does exist but it is empty
-	return nil, errors.New("No API key(s)")
+	return nil, errors.New("no API key(s)")
 }
 
 func ExtractSteamIDs(args []string) ([]string, error) {

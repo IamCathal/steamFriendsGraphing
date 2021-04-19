@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"os"
 	"testing"
-)
 
-var (
-	expectedGetPlayerSummaryUser UserStatsStruct 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
-
-type MockInterface struct {}
 
 type testInput struct {
 	steamID    string
@@ -18,32 +15,9 @@ type testInput struct {
 	shouldFail bool
 }
 
-func failTest(message string, t *testing.T) {
-	failMsg := fmt.Sprintf("%s: %s", t.Name(), message)
-	t.Errorf(failMsg)
-}
-
-func setupStubs() {
-	expectedGetPlayerSummaryUser = UserStatsStruct{
-		Response: Response{
-			Players: []Player{
-				Player {
-					Steamid: "76561198076045001",
-					Timecreated: 0,
-					Personaname: "expected pesrsona name",
-				},
-			},
-		},
-	}
-}
-
-func (m *MockInterface) CallPlayerSummaryAPI(steamID, apiKey string) (UserStatsStruct, error) {
-	return expectedGetPlayerSummaryUser, nil
-}
-
-func (m *MockInterface) CallIsAPIKeyValidAPI(apiKey string) string {
-	return "valid response"
-}
+var (
+	validUserSummaryResponse UserStatsStruct
+)
 
 func TestMain(m *testing.M) {
 	os.Setenv("testing", "")
@@ -53,136 +27,152 @@ func TestMain(m *testing.M) {
 
 	setupStubs()
 	code := m.Run()
-	
+
 	os.Exit(code)
 }
 
-func getAPIKeysForTesting() []string {
-	apiKeys := make([]string, 0)
-
-	// When being tested on the GitHub actions environment
-	// keys should be taken from the environment variables
-	// rather than the non existent APIKEYS.txt file
-	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
-		apiKeys = append(apiKeys, os.Getenv("APIKEY"))
-		apiKeys = append(apiKeys, os.Getenv("APIKEY1"))
-	} else {
-		apiKeySlice, err := GetAPIKeys()
-		CheckErr(err)
-		apiKeys = apiKeySlice
+func setupStubs() {
+	validUserSummaryResponse = UserStatsStruct{
+		Response: Response{
+			Players: []Player{
+				{
+					Steamid:     "76561198076045001",
+					Timecreated: 0,
+					Personaname: "expected persona name",
+				},
+			},
+		},
 	}
-
-	return apiKeys
 }
 
 func TestGetPlayerSummary(t *testing.T) {
-	apiKeys := getAPIKeysForTesting()
-	expectedSteamID := expectedGetPlayerSummaryUser.Response.Players[0].Steamid
+	mockController := &MockControllerInterface{}
 
-	cntr := &MockInterface{}
-	userDetails, _ := GetPlayerSummary(cntr, expectedSteamID, apiKeys[0])
+	expectedSteamID := validUserSummaryResponse.Response.Players[0].Steamid
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(validUserSummaryResponse, nil)
 
-	if userDetails.Response.Players[0].Steamid != expectedSteamID {
-		failMsg := fmt.Sprintf("expected SteamID: %s but received SteamID: %s", expectedSteamID, userDetails.Response.Players[0].Steamid)
-		failTest(failMsg, t)
-	}
+	userDetails, _ := GetPlayerSummary(mockController, expectedSteamID, "test API key")
+	receivedSteamID := userDetails.Response.Players[0].Steamid
+
+	assert.Equal(t, expectedSteamID, receivedSteamID, fmt.Sprintf("expected SteamID: %s but received SteamID: %s", expectedSteamID, receivedSteamID))
 }
 
 func TestCheckAPIKeys(t *testing.T) {
-	cntr := &MockInterface{}
-	apiKeys := getAPIKeysForTesting()
-	ALTCheckAPIKeys(cntr, apiKeys)
+	mockController := &MockControllerInterface{}
+
+	mockController.On("CallIsAPIKeyValidAPI", mock.AnythingOfType("string")).Return("valid response")
+	mockController.On("IsValidResponseForAPIKey", mock.AnythingOfType("string")).Return(true)
+
+	apiKeysToBeChecked := []string{
+		"example API key",
+		"another example API key",
+		"bags of cans",
+	}
+
+	CheckAPIKeys(mockController, apiKeysToBeChecked)
 }
 
-// Disabled until I can find a way to stub a function twice
-// func TestInvalidGetUserDetails(t *testing.T) {
-// 	apiKeys := getAPIKeysForTesting()
-// 	steamID := "eeee"
+func TestValidGetUserDetails(t *testing.T) {
+	mockController := &MockControllerInterface{}
+	steamID := "search steamID"
 
-// 	cntr := &MockInterface{}
-// 	_, err := GetUserDetails(cntr, apiKeys[0], steamID)
-// 	if err == nil {
-// 		failMsg := fmt.Sprintf("expected error for steamID: %s\n", steamID)
-// 		failTest(failMsg, t)
-// 	}
-// }
+	expectedUser := validUserSummaryResponse.Response.Players[0]
 
-func TestGetUsername(t *testing.T) {
-	apiKeys := getAPIKeysForTesting()
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(validUserSummaryResponse, nil)
+	receivedUser, _ := GetUserDetails(mockController, "example API key", steamID)
+
+	assert.NotNil(t, receivedUser, "expect to receive mocked user")
+	assert.Equal(t, receivedUser["SteamID"], expectedUser.Steamid)
+}
+
+func TestGetUserDetailsForNonExistantUser(t *testing.T) {
+	mockController := &MockControllerInterface{}
+	steamID := "search steamID"
+	expectedUserResponse := UserStatsStruct{
+		Response: Response{
+			Players: []Player{},
+		},
+	}
+
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(expectedUserResponse, nil)
+	_, err := GetUserDetails(mockController, "example API key", steamID)
+
+	assert.NotNil(t, err, "expect error to be returned when receiving 0 users")
+}
+
+func TestGetUsernameValidFormatSteamID(t *testing.T) {
+	mockController := &MockControllerInterface{}
+	apiKeys := []string{"test API key"}
 	steamID := "76561197960287930"
 
-	_, err := GetUsername(&MockInterface{}, apiKeys[0], steamID)
-	if err != nil {
-		failMsg := fmt.Sprintf("can't get username for %s using key %s", apiKeys[0], steamID)
-		failTest(failMsg, t)
-	}
+	expectedUsername := validUserSummaryResponse.Response.Players[0].Personaname
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(validUserSummaryResponse, nil)
+
+	receivedUsername, err := GetUsername(mockController, apiKeys[0], steamID)
+	assert.Nil(t, err, fmt.Sprintf("can't get username for user: %s using key: %s", steamID, apiKeys[0]))
+	assert.Equal(t, receivedUsername, expectedUsername, "expected to receive username: %s", expectedUsername)
 }
 
-func TestInvalidGetUsername(t *testing.T) {
-	apiKeys := getAPIKeysForTesting()
-	steamID := "invalid username"
+func TestGetUsernameWithInvalidFormatSteamID(t *testing.T) {
+	mockController := &MockControllerInterface{}
+	apiKeys := []string{"test API key"}
+	steamID := "invalid format SteamID"
 
-	_, err := GetUsername(&MockInterface{}, apiKeys[0], steamID)
-	if err == nil {
-		failMsg := fmt.Sprintf("can't get username for %s using key %s", steamID, apiKeys[0])
-		failTest(failMsg, t)
-	}
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(validUserSummaryResponse, nil)
+
+	_, err := GetUsername(mockController, apiKeys[0], steamID)
+	assert.NotNil(t, err, "didn't throw error for GetUsername call with invalid steamID: ", steamID)
 }
 
 func TestCreateDataFolder(t *testing.T) {
 	err := CreateUserDataFolder()
-	if err != nil {
-		failTest("error creating user data folder", t)
-	}
+
+	assert.Nil(t, err, "error creating user data folder")
+
 	os.RemoveAll("../testData/")
 }
 
 func TestIsValidAPIResponseForSteamID(t *testing.T) {
-	if isValid := IsValidAPIResponseForSteamId("Internal Server Error"); isValid {
-		failTest("Failed to catch invalid steamID", t)
-	}
+	isValid := IsValidAPIResponseForSteamId("Internal Server Error")
+	assert.False(t, isValid, "failed to catch invalid steamID")
 
-	if isValid := IsValidAPIResponseForSteamId("12 for €8.69 on Galahads is a mad deal"); !isValid {
-		failTest("Invalid steamID given for valid response", t)
-	}
+	isValid = IsValidAPIResponseForSteamId("12 for €8.69 on Galahads is a mad deal")
+	assert.True(t, isValid, "invalid steamID given for valid response")
 }
 
 func TestIsValidResponseForAPIKey(t *testing.T) {
-	if isValid := IsValidResponseForAPIKey("Forbidden"); isValid {
-		failTest("Failed to catch invalid steamID", t)
-	}
+	isValid := IsValidResponseForAPIKey("Forbidden")
+	assert.False(t, isValid, "failed to catch invalid steamID")
 
-	if isValid := IsValidResponseForAPIKey("8 for €12 on Heineken is not a mad deal"); !isValid {
-		failTest("Invalid steamID given for valid response", t)
-	}
+	isValid = IsValidResponseForAPIKey("8 for €12 on Heineken is not a mad deal")
+	assert.True(t, isValid, "invalid steamID given for valid response")
 }
 
 func TestExtractSteamIDs(t *testing.T) {
 	steamIDs := []string{"76561198090461077", "76561198130544932"}
 	IDs, err := ExtractSteamIDs(steamIDs)
-	if err != nil {
-		failTest(err.Error(), t)
-	}
-	if len(IDs) != 2 {
-		failTest("two valid steamIDs given and only 1 returned", t)
-	}
 
-	steamIDs2 := []string{}
-	_, err = ExtractSteamIDs(steamIDs2)
-	if err == nil {
-		failTest("no error given for empty steamID slice", t)
-	}
-
+	assert.Nil(t, err, "expect no errors when extracting valid IDs")
+	assert.ElementsMatch(t, IDs, steamIDs, "expect to receive {\"76561198090461077\", \"76561198130544932\"}")
 }
 
-func TestIsValidFormatSteamID(t *testing.T) {
-	if isValid := IsValidFormatSteamID("76561198087169600"); !isValid {
-		failMsg := fmt.Sprintf("TestIsValidFormatSteamID: expected %v for steamID: 76561198087169600\n", isValid)
-		failTest(failMsg, t)
-	}
+func TestExtarctSteamIDsWithNoneGiven(t *testing.T) {
+	steamIDs2 := []string{}
+	_, err := ExtractSteamIDs(steamIDs2)
 
-	if isValid := IsValidFormatSteamID("eeeeeeeee"); isValid {
-		failMsg := fmt.Sprintf("TestIsValidFormatSteamID: expected %v for steamID: eeeeeeeee\n", isValid)
-		failTest(failMsg, t)
-	}
+	assert.NotNil(t, err, "no error given for empty steamID slice")
+}
+
+func TestIsValidFormatSteamIDWithValidSteamID(t *testing.T) {
+	validSteamID := "76561198087169600"
+
+	isValid := IsValidFormatSteamID(validSteamID)
+	assert.True(t, isValid, fmt.Sprintf("expect to receive true for steamID: %s", validSteamID))
+}
+
+func TestIsValidFormatSteamIDWithInValidSteamID(t *testing.T) {
+	invalidSteamID := "eeeeeeeee"
+
+	isValid := IsValidFormatSteamID(invalidSteamID)
+	assert.False(t, isValid, fmt.Sprintf("expect to receive false for steamID: %s", invalidSteamID))
 }
