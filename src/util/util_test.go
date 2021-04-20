@@ -193,14 +193,14 @@ func TestSetBaseWorkingDirectory(t *testing.T) {
 }
 
 func TestGetAndRead(t *testing.T) {
-	testURL := "http://worldtimeapi.org/api/timezone"
+	testURL := "https://pastebin.com/"
 	_, err := GetAndRead(testURL)
 
 	assert.Nil(t, err)
 }
 
 func TestGetAndReadWithInvalidURL(t *testing.T) {
-	testURL := "gomey://worldtimeapi.org/api/timezone"
+	testURL := "gomey://pastebin.com/"
 	_, err := GetAndRead(testURL)
 
 	assert.NotNil(t, err)
@@ -243,4 +243,16 @@ func TestGetAPIKeysWithEmptyAPIKeysFile(t *testing.T) {
 	expectedErrorMessage := "APIKEYS.txt exists but has no API key(s)"
 	assert.Empty(t, apiKeys)
 	assert.Equal(t, expectedErrorMessage, err.Error())
+}
+
+func TestGetAPIKeysWithNonExistantAPIKeysFile(t *testing.T) {
+	mockController := &MockControllerInterface{}
+
+	expectedErr := errors.New("can't find file error")
+	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(nil, expectedErr)
+
+	apiKeys, err := GetAPIKeys(mockController)
+
+	assert.Empty(t, apiKeys)
+	assert.Equal(t, expectedErr.Error(), err.Error())
 }
