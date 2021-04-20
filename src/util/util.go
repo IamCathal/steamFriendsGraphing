@@ -30,6 +30,20 @@ type ControllerInterface interface {
 	CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error)
 
 	FileExists(steamID string) bool
+	OpenFile(fileName string) (*bufio.Scanner, error)
+}
+
+func (controller Controller) OpenFile(fileName string) (*bufio.Scanner, error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		errorMsg := fmt.Sprintf("failed to open %s", fileName)
+		return nil, errors.New(errorMsg)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	return scanner, nil
 }
 
 func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error) {
@@ -46,15 +60,12 @@ func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (Frie
 		return friendsObj, err
 	}
 
-	// If the HTTP response has error messages in it handle them accordingly
 	if valid := IsValidAPIResponseForSteamId(string(body)); !valid {
-		var temp FriendsStruct
-		return temp, fmt.Errorf("invalid steamID %s given", steamID)
+		return friendsObj, fmt.Errorf("invalid steamID %s given", steamID)
 	}
 
 	if valid := IsValidResponseForAPIKey(string(body)); !valid {
-		var temp FriendsStruct
-		return temp, fmt.Errorf("invalid api key: %s", apiKey)
+		return friendsObj, fmt.Errorf("invalid api key: %s", apiKey)
 	}
 
 	json.Unmarshal(body, &friendsObj)
@@ -225,7 +236,7 @@ func IsEnvVarSet(envvar string) bool {
 
 // GetAPIKeys retrieves the API key(s) to make requests with
 // API keys must be stored in APIKEY(s).txt
-func GetAPIKeys() ([]string, error) {
+func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
 	// Dirty fix for now. If testing then go test is invoked in the ./src
 	// directory and we should look in the parents parent directory for APIKEYS.txt
 	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
@@ -234,16 +245,12 @@ func GetAPIKeys() ([]string, error) {
 
 	// APIKEYS.txt MUST be in the root directory of the project
 	APIKeysLocation := fmt.Sprintf("%s/../APIKEYS.txt", os.Getenv("BWD"))
-
-	file, err := os.Open(APIKeysLocation)
-	if err != nil {
-		CheckErr(errors.New("no APIKEYS.txt file found"))
-	}
-	defer file.Close()
-
 	apiKeys := make([]string, 0)
 
-	scanner := bufio.NewScanner(file)
+	scanner, err := cntr.OpenFile(APIKeysLocation)
+	if err != nil {
+		return apiKeys, err
+	}
 	for scanner.Scan() {
 		apiKeys = append(apiKeys, scanner.Text())
 	}
@@ -252,11 +259,12 @@ func GetAPIKeys() ([]string, error) {
 		return nil, errors.New("error reading APIKEYS.txt")
 	}
 
-	if len(apiKeys) > 0 {
-		return apiKeys, nil
+	if empty := AllElementsEmpty(apiKeys); empty {
+		return nil, errors.New("APIKEYS.txt exists but has no API key(s)")
 	}
-	// APIKeys.txt does exist but it is empty
-	return nil, errors.New("no API key(s)")
+
+	return apiKeys, nil
+
 }
 
 func ExtractSteamIDs(args []string) ([]string, error) {
@@ -291,4 +299,14 @@ func GetAndRead(URL string) ([]byte, error) {
 		return []byte{}, err
 	}
 	return body, nil
+}
+
+func AllElementsEmpty(list []string) bool {
+	allElementsAreEmpty := true
+	for _, elem := range list {
+		if elem != "" {
+			return false
+		}
+	}
+	return allElementsAreEmpty
 }

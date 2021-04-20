@@ -1,19 +1,17 @@
 package util
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
-
-type testInput struct {
-	steamID    string
-	APIKey     string
-	shouldFail bool
-}
 
 var (
 	validUserSummaryResponse UserStatsStruct
@@ -51,10 +49,21 @@ func TestGetPlayerSummary(t *testing.T) {
 	expectedSteamID := validUserSummaryResponse.Response.Players[0].Steamid
 	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(validUserSummaryResponse, nil)
 
-	userDetails, _ := GetPlayerSummary(mockController, expectedSteamID, "test API key")
-	receivedSteamID := userDetails.Response.Players[0].Steamid
+	receivedUserDetails, _ := GetPlayerSummary(mockController, expectedSteamID, "test API key")
 
-	assert.Equal(t, expectedSteamID, receivedSteamID, fmt.Sprintf("expected SteamID: %s but received SteamID: %s", expectedSteamID, receivedSteamID))
+	assert.Equal(t, validUserSummaryResponse, receivedUserDetails)
+}
+
+func TestGetPlayerSummaryWithInvalidAPIResponse(t *testing.T) {
+	mockController := &MockControllerInterface{}
+	var emptyUserSummary UserStatsStruct
+	apiResponseErr := errors.New("U done goofed")
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(emptyUserSummary, apiResponseErr)
+
+	receivedUserDetails, err := GetPlayerSummary(mockController, "example steamID", "test API key")
+
+	assert.Equal(t, apiResponseErr, err)
+	assert.Empty(t, receivedUserDetails)
 }
 
 func TestCheckAPIKeys(t *testing.T) {
@@ -175,4 +184,63 @@ func TestIsValidFormatSteamIDWithInValidSteamID(t *testing.T) {
 
 	isValid := IsValidFormatSteamID(invalidSteamID)
 	assert.False(t, isValid, fmt.Sprintf("expect to receive false for steamID: %s", invalidSteamID))
+}
+
+func TestSetBaseWorkingDirectory(t *testing.T) {
+	SetBaseWorkingDirectory()
+
+	assert.NotEmpty(t, os.Getenv("BWD"))
+}
+
+func TestGetAndRead(t *testing.T) {
+	testURL := "http://worldtimeapi.org/api/timezone"
+	_, err := GetAndRead(testURL)
+
+	assert.Nil(t, err)
+}
+
+func TestGetAndReadWithInvalidURL(t *testing.T) {
+	testURL := "gomey://worldtimeapi.org/api/timezone"
+	_, err := GetAndRead(testURL)
+
+	assert.NotNil(t, err)
+}
+
+func TestGetAPIKeys(t *testing.T) {
+	mockController := &MockControllerInterface{}
+
+	file, err := ioutil.TempFile("", "tempAPIKeys.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	file.WriteString("apiKey1\napiKey2\napiKey3")
+	file.Seek(0, 0)
+	scanner := bufio.NewScanner(file)
+
+	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(scanner, nil)
+
+	apiKeys, err := GetAPIKeys(mockController)
+
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"apiKey1", "apiKey2", "apiKey3"}, apiKeys)
+}
+
+func TestGetAPIKeysWithEmptyAPIKeysFile(t *testing.T) {
+	mockController := &MockControllerInterface{}
+
+	file, err := ioutil.TempFile("", "tempAPIKeys.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	scanner := bufio.NewScanner(file)
+
+	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(scanner, nil)
+
+	apiKeys, err := GetAPIKeys(mockController)
+
+	expectedErrorMessage := "APIKEYS.txt exists but has no API key(s)"
+	assert.Empty(t, apiKeys)
+	assert.Equal(t, expectedErrorMessage, err.Error())
 }

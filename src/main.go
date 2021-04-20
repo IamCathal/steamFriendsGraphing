@@ -21,13 +21,14 @@ func main() {
 	httpserver := flag.Bool("httpserver", false, "Run the application as a HTTP server")
 	flag.Parse()
 
+	cntr := util.Controller{}
 	util.SetBaseWorkingDirectory()
 
 	if *httpserver {
 		server.RunServer("8080")
 		return
 	}
-	apiKeys, err := util.GetAPIKeys()
+	apiKeys, err := util.GetAPIKeys(cntr)
 	util.CheckErr(err)
 	steamIDs, err := util.ExtractSteamIDs(os.Args)
 	if err != nil {
@@ -48,8 +49,6 @@ func main() {
 		return
 	}
 
-	cntr := util.Controller{}
-
 	if config.StatMode {
 		for _, steamID := range steamIDs {
 			resMap, err := util.GetUserDetails(cntr, config.APIKeys[0], steamID)
@@ -64,7 +63,7 @@ func main() {
 	}
 	if len(steamIDs) == 1 {
 		os.Setenv("CURRTARGET", steamIDs[0])
-		worker.InitCrawling(config, steamIDs[0])
+		worker.InitCrawling(cntr, config, steamIDs[0])
 		worker.GenerateURL(steamIDs[0], urlMap)
 		gData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
 		gData.Render(fmt.Sprintf("%s/../finishedGraphs/%s", os.Getenv("BWD"), urlMap[steamIDs[0]]))
@@ -76,9 +75,9 @@ func main() {
 		worker.GenerateURL(fmt.Sprintf("%s%s", steamIDs[0], steamIDs[1]), urlMap)
 
 		os.Setenv("CURRTARGET", steamIDs[0])
-		worker.InitCrawling(config, steamIDs[0])
+		worker.InitCrawling(cntr, config, steamIDs[0])
 		os.Setenv("CURRTARGET", steamIDs[1])
-		worker.InitCrawling(config, steamIDs[1])
+		worker.InitCrawling(cntr, config, steamIDs[1])
 
 		StartUserGraphData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
 		EndUserGraphData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[1])
