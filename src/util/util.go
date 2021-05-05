@@ -139,7 +139,6 @@ func GetUserDetails(cntr ControllerInterface, apiKey, steamID string) (map[strin
 	resMap["TimeCreated"] = fmt.Sprintf("%s", time.Unix(int64(userStatsObj.Response.Players[0].Timecreated), 0))
 	resMap["ProfileURL"] = userStatsObj.Response.Players[0].Profileurl
 	resMap["AvatarURL"] = userStatsObj.Response.Players[0].Avatarfull
-
 	return resMap, err
 }
 
@@ -256,13 +255,11 @@ func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, errors.New("error reading APIKEYS.txt")
+		return nil, fmt.Errorf("error reading APIKEYS.txt: %s", err.Error())
 	}
-
 	if empty := AllElementsEmpty(apiKeys); empty {
 		return nil, errors.New("APIKEYS.txt exists but has no API key(s)")
 	}
-
 	return apiKeys, nil
 
 }
@@ -302,11 +299,10 @@ func GetAndRead(URL string) ([]byte, error) {
 }
 
 func AllElementsEmpty(list []string) bool {
-	allElementsAreEmpty := true
 	for _, elem := range list {
 		if elem != "" {
 			return false
 		}
 	}
-	return allElementsAreEmpty
+	return true
 }
