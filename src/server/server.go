@@ -48,24 +48,6 @@ func CrawlMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// HomeHandler serves the content for the home page
-func HomeHandler(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	vars["startTime"] = strconv.FormatInt(startTime, 10)
-
-	res := struct {
-		Body string
-	}{
-		Body: "API is operational",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(res)
-	LogCall(req, http.StatusOK, vars["startTime"], false)
-}
-
 func statLookup(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	apiKeys, err := util.GetAPIKeys(cntr)
@@ -73,7 +55,7 @@ func statLookup(w http.ResponseWriter, req *http.Request) {
 
 	userStats, err := util.GetUserDetails(cntr, apiKeys[0], vars["steamID0"])
 	util.CheckErr(err)
-	fmt.Printf("\n\nSending back: %+v\n\n\n", userStats)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(userStats)
@@ -126,7 +108,6 @@ func RunServer(port string) {
 	r.HandleFunc("/crawl", crawl).Methods("POST")
 	r.HandleFunc("/statlookup", statLookup).Methods("POST")
 	r.HandleFunc("/status", status).Methods("POST")
-	r.HandleFunc("/", HomeHandler).Methods("POST")
 	r.Use(CrawlMiddleware)
 
 	log.Printf("Starting web server on http://localhost:%s\n", port)

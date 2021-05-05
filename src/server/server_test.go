@@ -4,7 +4,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -28,41 +27,11 @@ func createValidAPIKEYSFile() *os.File {
 	return file
 }
 
-// func readAndUnmarshal(res *httptest.ResponseRecorder) (basicResponse, error) {
-// 	resJSON := basicResponse{}
-// 	response, err := ioutil.ReadAll(res.Body)
-// 	if err != nil {
-// 		return resJSON, err
-// 	}
-// 	err = json.Unmarshal(response, &resJSON)
-// 	if err != nil {
-// 		return resJSON, err
-// 	}
-// 	return resJSON, nil
-// }
-
 func TestMain(m *testing.M) {
-	path, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.Setenv("BWD", fmt.Sprintf("%s/../", path))
-
 	code := m.Run()
 
 	os.Exit(code)
 }
-
-// func initRouter() *mux.Router {
-// 	r := mux.NewRouter()
-// 	r.HandleFunc("/", HomeHandler).Methods("POST")
-// 	r.HandleFunc("/crawl", crawl).Methods("POST")
-// 	r.HandleFunc("/statlookup", statLookup).Methods("POST")
-// 	r.HandleFunc("/status", status).Methods("POST")
-// 	r.Use(CrawlMiddleware)
-
-// 	return r
-// }
 
 func TestAPIStatus(t *testing.T) {
 	assert.HTTPStatusCode(t, status, "POST", "/status", nil, 200)
@@ -110,14 +79,3 @@ func TestCrawl(t *testing.T) {
 	assert.HTTPStatusCode(t, crawl, "POST", "/crawl", urlVals, 200)
 	assert.HTTPBodyContains(t, crawl, "POST", "/crawl", urlVals, "Your finished graph will be saved under")
 }
-
-// func TestServerRun(t *testing.T) {
-// 	// There must be a better way to do this
-// 	// but it'll work for now and it doesn't
-// 	// mess anything else up
-// 	fmt.Printf("\n\n")
-// 	go RunServer("8085")
-// 	time.Sleep(50 * time.Millisecond)
-// 	fmt.Printf("\n\n")
-// 	os.Exit(0)
-// }
