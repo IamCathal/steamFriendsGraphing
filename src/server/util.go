@@ -8,11 +8,6 @@ import (
 	"time"
 )
 
-type basicResponse struct {
-	Status int    `json:"status"`
-	Body   string `json:"body"`
-}
-
 type statusResponse struct {
 	Status string        `json:"status"`
 	Uptime time.Duration `json:"uptime"`
@@ -59,7 +54,7 @@ func LogCall(req *http.Request, status int, startTimeString string, cached bool)
 	} else {
 		statusColor = "\033[31m"
 	}
-	fmt.Printf("[%s] %s%s %s %s%d%s %dms\n", time.Now().Format("02-Jan-2006 15:04:05"), 
+	fmt.Printf("[%s] %s%s %s %s%d%s %dms\n", time.Now().Format("02-Jan-2006 15:04:05"),
 		cacheString, req.Method, req.URL.Path, statusColor, status, "\033[0m", delay)
 }
 
@@ -67,9 +62,10 @@ func LogCall(req *http.Request, status int, startTimeString string, cached bool)
 func sendErrorResponse(w http.ResponseWriter, r *http.Request, httpStatus int, startTime, errorString string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
-	res := basicResponse{
-		Status: httpStatus,
-		Body:   errorString,
+	res := struct {
+		response string
+	}{
+		response: errorString,
 	}
 	json.NewEncoder(w).Encode(res)
 	LogCall(r, httpStatus, startTime, false)

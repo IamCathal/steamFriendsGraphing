@@ -1,66 +1,45 @@
+// +build service
+
 package server
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
-	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
-	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/steamFriendsGraphing/util"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-var (
-	expectedGetPlayerSummaryUser util.UserStatsStruct 
-)
-
-type MockInterface struct {}
-
-func setupStubs() {
-	expectedGetPlayerSummaryUser = util.UserStatsStruct{
-		Response: util.Response{
-			Players: []util.Player{
-				util.Player {
-					Steamid: "76561198076045001",
-					Timecreated: 0,
-					Personaname: "expected pesrsona name",
-				},
-			},
-		},
-	}
-}
-
-func (m *MockInterface) CallPlayerSummaryAPI(steamID, apiKey string) (util.UserStatsStruct, error) {
-	return expectedGetPlayerSummaryUser, nil
-}
-
-func (m *MockInterface) CallIsAPIKeyValidAPI(apiKey string) string {
-	return "valid response"
-}
-
-func failTest(message string, t *testing.T) {
-	failMsg := fmt.Sprintf("%s: %s", t.Name(), message)
-	t.Errorf(failMsg)
-}
-
-func readAndUnmarshal(res *httptest.ResponseRecorder) (basicResponse, error) {
-	resJSON := basicResponse{}
-	response, err := ioutil.ReadAll(res.Body)
+func createValidAPIKEYSFile() *os.File {
+	file, err := ioutil.TempFile("", "tempAPIKeys.txt")
 	if err != nil {
-		return resJSON, err
+		log.Fatal(err)
 	}
-	err = json.Unmarshal(response, &resJSON)
-	if err != nil {
-		return resJSON, err
-	}
-	return resJSON, nil
+	defer os.Remove(file.Name())
+	file.WriteString("apiKey1\napiKey2\napiKey3")
+	file.Seek(0, 0)
+
+	return file
 }
+
+// func readAndUnmarshal(res *httptest.ResponseRecorder) (basicResponse, error) {
+// 	resJSON := basicResponse{}
+// 	response, err := ioutil.ReadAll(res.Body)
+// 	if err != nil {
+// 		return resJSON, err
+// 	}
+// 	err = json.Unmarshal(response, &resJSON)
+// 	if err != nil {
+// 		return resJSON, err
+// 	}
+// 	return resJSON, nil
+// }
 
 func TestMain(m *testing.M) {
 	path, err := os.Getwd()
@@ -69,96 +48,76 @@ func TestMain(m *testing.M) {
 	}
 	os.Setenv("BWD", fmt.Sprintf("%s/../", path))
 
-	setupStubs()
-
 	code := m.Run()
+
 	os.Exit(code)
 }
 
-func initRouter() *mux.Router {
-	r := mux.NewRouter()
-	r.HandleFunc("/", HomeHandler).Methods("POST")
-	r.HandleFunc("/crawl", crawl).Methods("POST")
-	r.HandleFunc("/statlookup", statLookup).Methods("POST")
-	r.HandleFunc("/status", status).Methods("POST")
-	r.Use(CrawlMiddleware)
+// func initRouter() *mux.Router {
+// 	r := mux.NewRouter()
+// 	r.HandleFunc("/", HomeHandler).Methods("POST")
+// 	r.HandleFunc("/crawl", crawl).Methods("POST")
+// 	r.HandleFunc("/statlookup", statLookup).Methods("POST")
+// 	r.HandleFunc("/status", status).Methods("POST")
+// 	r.Use(CrawlMiddleware)
 
-	return r
-}
+// 	return r
+// }
 
 func TestAPIStatus(t *testing.T) {
-	req, _ := http.NewRequest("POST", "/", nil)
-	res := httptest.NewRecorder()
-	initRouter().ServeHTTP(res, req)
-
-	resJSON, err := readAndUnmarshal(res)
-	if err != nil {
-		failTest("Error reading response", t)
-	}
-
-	if resJSON.Status != 200 || resJSON.Body != "API is operational" {
-		failTest("Root endpoint not operational", t)
-	}
+	assert.HTTPStatusCode(t, status, "POST", "/status", nil, 200)
+	assert.HTTPBodyContains(t, status, "POST", "/status", nil, "operational")
 }
 
-func TestStatLookup(t *testing.T) {
-	cntr := &MockInterface{}
-	setController(cntr)
-	reqBody, err := json.Marshal(map[string]string{
-		"steamID0": "76561197960271945",
-		"statMode": "true",
-	})
-	if err != nil {
-		failTest(err.Error(), t)
-	}
+func TestStatLookupWithExpectedUserStats(t *testing.T) {
+	mockController := &util.MockControllerInterface{}
+	SetController(mockController)
 
-	req, _ := http.NewRequest("POST", "/statlookup", bytes.NewBuffer(reqBody))
-	res := httptest.NewRecorder()
-	initRouter().ServeHTTP(res, req)
-
-	resJSON, err := readAndUnmarshal(res)
-	if err != nil {
-		failTest("Error unmarshaling response", t)
+	expectedGetPlayerSummaryUser := util.UserStatsStruct{
+		Response: util.Response{
+			Players: []util.Player{
+				{
+					Avatarfull:   "expected full avatar url",
+					Profileurl:   "expected profile url",
+					Profilestate: 1,
+					Realname:     "Francis Higgins",
+					Steamid:      "76561198076045001",
+					Personaname:  "expected persona name",
+				},
+			},
+		},
 	}
+	expectedUserStats := expectedGetPlayerSummaryUser.Response.Players[0]
 
-	if resJSON.Status != 200 {
-		failTest("expect 200 respons", t)
-	}
+	file := createValidAPIKEYSFile()
+
+	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(file, nil)
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(expectedGetPlayerSummaryUser, nil)
+
+	urlVals, _ := url.ParseQuery("steamID0=testSteamID&statmode=true")
+	res := assert.HTTPBody(statLookup, "POST", "/statlookup", urlVals)
+
+	resStruct := util.Player{}
+	json.Unmarshal([]byte(res), &resStruct)
+
+	assert.Equal(t, expectedUserStats, resStruct)
 }
 
 func TestCrawl(t *testing.T) {
-	reqBody, err := json.Marshal(map[string]string{
-		"level":    "3",
-		"testkeys": "false",
-		"workers":  "4",
-		"steamID0": "76561197960271945",
-		"statmode": "true",
-	})
-	if err != nil {
-		failTest(err.Error(), t)
-	}
+	reqBody := "level=3&testkeys=false&workers=4&steamID0=testSteamID&statmode=true"
+	urlVals, _ := url.ParseQuery(reqBody)
 
-	req, _ := http.NewRequest("POST", "/crawl", bytes.NewBuffer(reqBody))
-	res := httptest.NewRecorder()
-	initRouter().ServeHTTP(res, req)
-
-	resJSON, err := readAndUnmarshal(res)
-	if err != nil {
-		failTest("Error reading response",t)
-	}
-
-	if resJSON.Status != 200 {
-		t.Errorf("Crawl endpoint not operational")
-	}
+	assert.HTTPStatusCode(t, crawl, "POST", "/crawl", urlVals, 200)
+	assert.HTTPBodyContains(t, crawl, "POST", "/crawl", urlVals, "Your finished graph will be saved under")
 }
 
-func TestServerRun(t *testing.T) {
-	// There must be a better way to do this
-	// but it'll work for now and it doesn't
-	// mess anything else up
-	fmt.Printf("\n\n")
-	go RunServer("8085")
-	time.Sleep(50 * time.Millisecond)
-	fmt.Printf("\n\n")
-	os.Exit(0)
-}
+// func TestServerRun(t *testing.T) {
+// 	// There must be a better way to do this
+// 	// but it'll work for now and it doesn't
+// 	// mess anything else up
+// 	fmt.Printf("\n\n")
+// 	go RunServer("8085")
+// 	time.Sleep(50 * time.Millisecond)
+// 	fmt.Printf("\n\n")
+// 	os.Exit(0)
+// }
