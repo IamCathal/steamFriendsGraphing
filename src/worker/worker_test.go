@@ -1,3 +1,5 @@
+// +build service
+
 package worker
 
 import (
