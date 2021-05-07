@@ -13,7 +13,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"time"
 )
 
 var (
@@ -30,20 +29,16 @@ type ControllerInterface interface {
 	CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error)
 
 	FileExists(steamID string) bool
-	OpenFile(fileName string) (*bufio.Scanner, error)
+	OpenFile(fileName string) (*os.File, error)
 }
 
-func (controller Controller) OpenFile(fileName string) (*bufio.Scanner, error) {
+func (controller Controller) OpenFile(fileName string) (*os.File, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		errorMsg := fmt.Sprintf("failed to open %s", fileName)
 		return nil, errors.New(errorMsg)
 	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-
-	return scanner, nil
+	return file, nil
 }
 
 func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error) {
@@ -102,17 +97,16 @@ func (control Controller) FileExists(steamID string) bool {
 }
 
 // GetPlayerSummary gets a player summary through the steam web API
-func GetPlayerSummary(cntr ControllerInterface, steamID, apiKey string) (UserStatsStruct, error) {
+func GetPlayerSummary(cntr ControllerInterface, steamID, apiKey string) (Player, error) {
 	userStatsObj, err := cntr.CallPlayerSummaryAPI(steamID, apiKey)
 	if err != nil {
-		return userStatsObj, err
+		return userStatsObj.Response.Players[0], err
 	}
 
 	if len(userStatsObj.Response.Players) == 0 {
-		return userStatsObj, fmt.Errorf("invalid steamID %s given", steamID)
+		return userStatsObj.Response.Players[0], fmt.Errorf("invalid steamID %s given", steamID)
 	}
-
-	return userStatsObj, nil
+	return userStatsObj.Response.Players[0], nil
 }
 
 // GetUsername gets a username from a given steamID by querying the
@@ -122,24 +116,24 @@ func GetUsername(cntr ControllerInterface, apiKey, steamID string) (string, erro
 		return "", fmt.Errorf("invalid steamID format: %s", steamID)
 	}
 	userStatsObj, err := GetPlayerSummary(cntr, steamID, apiKey)
-	return userStatsObj.Response.Players[0].Personaname, err
+	return userStatsObj.Personaname, err
 }
 
 // GetUserDetails gets profile details such as: steamID, username, time created
 // profile URL and avatar URL
-func GetUserDetails(cntr ControllerInterface, apiKey, steamID string) (map[string]string, error) {
+func GetUserDetails(cntr ControllerInterface, apiKey, steamID string) (Player, error) {
 	userStatsObj, err := GetPlayerSummary(cntr, steamID, apiKey)
 	if err != nil {
-		return nil, err
+		return userStatsObj, err
 	}
 
-	resMap := make(map[string]string)
-	resMap["SteamID"] = userStatsObj.Response.Players[0].Steamid
-	resMap["Username"] = userStatsObj.Response.Players[0].Personaname
-	resMap["TimeCreated"] = fmt.Sprintf("%s", time.Unix(int64(userStatsObj.Response.Players[0].Timecreated), 0))
-	resMap["ProfileURL"] = userStatsObj.Response.Players[0].Profileurl
-	resMap["AvatarURL"] = userStatsObj.Response.Players[0].Avatarfull
-	return resMap, err
+	// resMap := make(map[string]string)
+	// resMap["SteamID"] = userStatsObj.Response.Players[0].Steamid
+	// resMap["Username"] = userStatsObj.Response.Players[0].Personaname
+	// resMap["TimeCreated"] = fmt.Sprintf("%s", time.Unix(int64(userStatsObj.Response.Players[0].Timecreated), 0))
+	// resMap["ProfileURL"] = userStatsObj.Response.Players[0].Profileurl
+	// resMap["AvatarURL"] = userStatsObj.Response.Players[0].Avatarfull
+	return userStatsObj, nil
 }
 
 // CreateUserDataFolder creates a folder for holding cache.
@@ -246,10 +240,12 @@ func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
 	APIKeysLocation := fmt.Sprintf("%s/../APIKEYS.txt", os.Getenv("BWD"))
 	apiKeys := make([]string, 0)
 
-	scanner, err := cntr.OpenFile(APIKeysLocation)
+	file, err := cntr.OpenFile(APIKeysLocation)
 	if err != nil {
 		return apiKeys, err
 	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		apiKeys = append(apiKeys, scanner.Text())
 	}

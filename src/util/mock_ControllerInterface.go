@@ -3,7 +3,7 @@
 package util
 
 import (
-	bufio "bufio"
+	os "os"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -84,15 +84,15 @@ func (_m *MockControllerInterface) FileExists(steamID string) bool {
 }
 
 // OpenFile provides a mock function with given fields: fileName
-func (_m *MockControllerInterface) OpenFile(fileName string) (*bufio.Scanner, error) {
+func (_m *MockControllerInterface) OpenFile(fileName string) (*os.File, error) {
 	ret := _m.Called(fileName)
 
-	var r0 *bufio.Scanner
-	if rf, ok := ret.Get(0).(func(string) *bufio.Scanner); ok {
+	var r0 *os.File
+	if rf, ok := ret.Get(0).(func(string) *os.File); ok {
 		r0 = rf(fileName)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*bufio.Scanner)
+			r0 = ret.Get(0).(*os.File)
 		}
 	}
 

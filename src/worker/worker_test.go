@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -8,19 +9,36 @@ import (
 	"testing"
 
 	"github.com/steamFriendsGraphing/util"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
-
-type testInput struct {
-	steamID    string
-	APIKey     string
-	shouldFail bool
-}
 
 func TestMain(m *testing.M) {
 	os.Setenv("testing", "")
-	os.RemoveAll("../testData")
+	path, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	os.Setenv("BWD", fmt.Sprintf("%s/../", path))
+
+	// fmt.Println("worker_test")
+	// fmt.Println(":: RemoveAll ../testData")
+	// os.RemoveAll("../testData")
+
+	// fmt.Println(":: Mkdir ../testData")
 	os.Mkdir("../testData", 0755)
+	// fmt.Println(":: Mkdir ../testLogs")
 	os.Mkdir("../testLogs", 0755)
+
+	// files, err := ioutil.ReadDir("../")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println("worker_test THE FILES IN ABOVE DIR")
+	// for _, f := range files {
+	// 	fmt.Println(f.Name())
+	// }
+	// fmt.Printf("\n\n")
 
 	code := m.Run()
 
@@ -29,170 +47,229 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func getAPIKeysForTesting() []string {
-	apiKeys := make([]string, 0)
+// func TestInitWorkerConfig(t *testing.T) {
+// 	// _, err := os.Stat("../testData")
+// 	// if os.IsNotExist(err) {
+// 	// 	fmt.Println(":: ../testData [TestInitWorkerConfig] DOES NOT EXIST -------------------")
+// 	// } else {
+// 	// 	fmt.Println(":: ../testData [TestInitWorkerConfig] DOES EXIST +++++++++++++++++++++++")
+// 	// }
 
-	// When being test on the GitHub actions environment
-	// it should take keys from from the environment variables
-	// rather than the non existent APIKEYS.txt file
-	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
-		apiKeys = append(apiKeys, os.Getenv("APIKEY"))
-		apiKeys = append(apiKeys, os.Getenv("APIKEY1"))
-	} else {
-		apiKeySlice, err := util.GetAPIKeys()
-		util.CheckErr(err)
+// 	_, err := InitWorkerConfig(4, 15)
+// 	assert.Nil(t, err)
 
-		apiKeys = apiKeySlice
-	}
+// 	_, err = InitWorkerConfig(-2, 20)
+// 	assert.NotNil(t, err, "failed to catch invalid levelCap of -2")
 
-	return apiKeys
+// 	_, err = InitWorkerConfig(2, 625)
+// 	if err == nil {
+// 		t.Errorf("failed to catch invalid worker amount of of 625")
+// 	}
+
+// 	_, err = InitWorkerConfig(2, 0)
+// 	if err == nil {
+// 		t.Errorf("failed to catch invalid worker amount of 0")
+// 	}
+// }
+
+func TestDivmod(t *testing.T) {
+	testNumber := 140
+
+	quotient, remainder := Divmod(testNumber, 100)
+	assert.Equal(t, 1, quotient)
+	assert.Equal(t, 40, remainder)
 }
 
-func TestInitWorkerConfig(t *testing.T) {
-	_, err := InitWorkerConfig(4, 15)
-	if err != nil {
-		t.Error(err)
-	}
+func TestInitWorkerConfigWithValidInformation(t *testing.T) {
+	expectedLevelCap := 2
+	expectedWorkerAmount := 40
 
-	_, err = InitWorkerConfig(-2, 20)
-	if err == nil {
-		t.Errorf("failed to catch invalid levelCap of -2")
-	}
+	workerConfig, err := InitWorkerConfig(expectedLevelCap, expectedWorkerAmount)
 
-	_, err = InitWorkerConfig(2, 625)
-	if err == nil {
-		t.Errorf("failed to catch invalid worker amount of of 625")
-	}
-
-	_, err = InitWorkerConfig(2, 0)
-	if err == nil {
-		t.Errorf("failed to catch invalid worker amount of 0")
-	}
+	assert.Nil(t, err)
+	assert.Equal(t, expectedLevelCap, workerConfig.LevelCap)
+	assert.Equal(t, expectedWorkerAmount, workerConfig.WorkerAmount)
 }
 
-func TestGetFriends(t *testing.T) {
-	apiKeys := getAPIKeysForTesting()
+func TestInitWorkerConfigWithInvalidLevelCap(t *testing.T) {
+	expectedLevelCap := -1
+	expectedWorkerAmount := 40
+
+	expectedError := errors.New(fmt.Sprintf("invalid level %d given. levelCap must be in range 1-4 (inclusive)", expectedLevelCap))
+
+	workerConfig, err := InitWorkerConfig(expectedLevelCap, expectedWorkerAmount)
+
+	assert.Empty(t, workerConfig)
+	assert.EqualError(t, err, expectedError.Error())
+}
+
+func TestInitWorkerConfigWithInvalidWorkerAmount(t *testing.T) {
+	expectedLevelCap := 2
+	expectedWorkerAmount := 129
+
+	expectedError := errors.New(fmt.Sprintf("invalid worker amount %d given. worker amount must be in range 1-60 (inclusive)", expectedLevelCap))
+
+	workerConfig, err := InitWorkerConfig(expectedLevelCap, expectedWorkerAmount)
+
+	assert.Empty(t, workerConfig)
+	assert.EqualError(t, err, expectedError.Error())
+}
+func TestGetFriendsWithValidInformation(t *testing.T) {
+	mockController := &util.MockControllerInterface{}
+	originalUserSteamID := "76561198282036055"
+
+	eddieDurcanSteamID := "007"
+	eddieDurcanUsername := "eddieDurcan247"
+	eddieDurcanFriendsSince := 5
+
+	frenchToastSteamID := "008"
+	frenchToastUsername := "toasteen"
+	frenchToastFriendsSince := 8
+
+	apiKeys := []string{"apiKey1", "apiKey2"}
 	jobs := make(chan JobsStruct, 100)
 
-	var tests = []testInput{
-		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
-		{"76561198282036055", apiKeys[rand.Intn(len(apiKeys))], false},
-		{"76561198081485934", "invalid key", true},
-		{"7656119807862962", apiKeys[rand.Intn(len(apiKeys))], true},
-		{"76561198271948679", apiKeys[rand.Intn(len(apiKeys))], false},
-		{"7656119796028793", apiKeys[rand.Intn(len(apiKeys))], true},
-		{"76561198144084014", apiKeys[rand.Intn(len(apiKeys))], false},
-		{"11111111111111111", apiKeys[rand.Intn(len(apiKeys))], true},
-		{"gibberish", apiKeys[rand.Intn(len(apiKeys))], true},
+	testCase := struct {
+		steamID  string
+		apikey   string
+		statMode bool
+	}{
+		originalUserSteamID,
+		apiKeys[rand.Intn(len(apiKeys))],
+		false,
 	}
 
-	for _, testCase := range tests {
-		os.Setenv("CURRTARGET", testCase.steamID)
-		_, err := os.Create(fmt.Sprintf("../testLogs/%s.txt", testCase.steamID))
-
-		if err != nil {
-			log.Fatal(fmt.Sprintf("eee %s", err))
-		}
-		_, err = GetFriends(testCase.steamID, testCase.APIKey, 1, jobs)
-		if err != nil {
-			if !testCase.shouldFail {
-				t.Error("Error:", err,
-					"SteamID:", testCase.steamID,
-				)
-			}
-		} else if testCase.shouldFail {
-			t.Error("caught misbehaving testcase",
-				"APIKEY:", testCase.APIKey,
-				"SteamID:", testCase.steamID,
-			)
-		}
+	friendsInfoForOriginalUser := util.FriendsStruct{
+		FriendsList: util.Friendslist{
+			Friends: []util.Friend{
+				{
+					Steamid:      eddieDurcanSteamID,
+					Relationship: "friend",
+					FriendSince:  eddieDurcanFriendsSince,
+				},
+				{
+					Steamid:      frenchToastSteamID,
+					Relationship: "friend",
+					FriendSince:  frenchToastFriendsSince,
+				},
+			},
+		},
 	}
 
+	friendsInfoForOriginalUserUserStats := util.UserStatsStruct{
+		Response: util.Response{
+			Players: []util.Player{
+				{
+					Steamid:     eddieDurcanSteamID,
+					Personaname: eddieDurcanUsername,
+				},
+				{
+					Steamid:     frenchToastSteamID,
+					Personaname: frenchToastUsername,
+				},
+			},
+		},
+	}
+
+	friendsUsernamesForOriginalUser := util.FriendsStruct{
+		FriendsList: util.Friendslist{
+			Friends: []util.Friend{
+				{
+					Steamid:      eddieDurcanSteamID,
+					Relationship: "friend",
+					Username:     eddieDurcanUsername,
+					FriendSince:  eddieDurcanFriendsSince,
+				},
+				{
+					Steamid:      frenchToastSteamID,
+					Relationship: "friend",
+					Username:     frenchToastUsername,
+					FriendSince:  frenchToastFriendsSince,
+				},
+			},
+		},
+	}
+
+	os.Setenv("CURRTARGET", testCase.steamID)
+	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
+	mockController.On("CallGetFriendsListAPI", mock.AnythingOfType("string"), originalUserSteamID).Return(friendsInfoForOriginalUser, nil)
+
+	// Used to get the friendslist of the target user
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(friendsInfoForOriginalUserUserStats, nil)
+	// Used to get the username of the current target user
+	mockController.On("CallPlayerSummary", originalUserSteamID, mock.AnythingOfType("string")).Return(friendsUsernamesForOriginalUser, nil)
+
+	friends, err := GetFriends(mockController, testCase.steamID, testCase.apikey, 1, jobs)
+
+	assert.Nil(t, err)
+	assert.Equal(t, friendsUsernamesForOriginalUser.FriendsList, friends.FriendsList)
 }
 
-func TestGetUsernameFromCacheFile(t *testing.T) {
-	apiKeys := getAPIKeysForTesting()
+func TestGetFriendsWithInvalidGetFriendsAPICallWhenRetrievingTargetUsersFriends(t *testing.T) {
+	mockController := &util.MockControllerInterface{}
+	originalUserSteamID := "76561198282036055"
+
+	apiKeys := []string{"apiKey1", "apiKey2"}
 	jobs := make(chan JobsStruct, 100)
 
-	_, err := GetFriends("76561198096639661", apiKeys[0], 1, jobs)
-	if err != nil {
-		t.Error(err)
+	testCase := struct {
+		steamID  string
+		apikey   string
+		statMode bool
+	}{
+		originalUserSteamID,
+		apiKeys[rand.Intn(len(apiKeys))],
+		false,
 	}
 
-	var tests = []testInput{
-		{"76561198306145504", "", true},
-		{"76561198096639661", "", false},
-	}
-	for _, elem := range tests {
-		_, err := GetUsernameFromCacheFile(elem.steamID)
-		if err != nil {
-			if !elem.shouldFail {
-				t.Errorf("didn't fail to get username for %s", elem.steamID)
-			}
-		} else if elem.shouldFail {
-			t.Error("caught misbehaving testcase",
-				"SteamID:", elem.steamID,
-			)
-		}
-	}
+	os.Setenv("CURRTARGET", testCase.steamID)
+	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
+
+	getFriendsListAPIError := errors.New("error")
+	mockController.On("CallGetFriendsListAPI", mock.AnythingOfType("string"), originalUserSteamID).Return(util.FriendsStruct{}, getFriendsListAPIError)
+
+	friends, err := GetFriends(mockController, testCase.steamID, testCase.apikey, 1, jobs)
+
+	assert.Empty(t, friends)
+	assert.EqualError(t, err, getFriendsListAPIError.Error())
 }
 
-func TestGetCache(t *testing.T) {
-	_, err := GetCache("76561198282036055e")
-	if err == nil {
-		t.Error("invalid cache get did not throw an error")
+func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
+	mockController := &util.MockControllerInterface{}
+	originalUserSteamID := "invalid"
+
+	apiKeys := []string{"apiKey1", "apiKey2"}
+	jobs := make(chan JobsStruct, 100)
+
+	testCase := struct {
+		steamID  string
+		apikey   string
+		statMode bool
+	}{
+		originalUserSteamID,
+		apiKeys[rand.Intn(len(apiKeys))],
+		false,
 	}
 
-	// Will fail if not run as part of the whole test suite
-	// as this cache file will not have been written
-	_, err = GetCache("76561198245030292")
-	if err == nil {
-		t.Error("Got invalid cache for user 76561198245030292")
-	}
+	os.Setenv("CURRTARGET", testCase.steamID)
+	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
+	expectedError := errors.New(fmt.Sprintf("invalid steamID %s, apikey %s\n", testCase.steamID, testCase.apikey))
+
+	friends, err := GetFriends(mockController, testCase.steamID, testCase.apikey, 1, jobs)
+
+	assert.Empty(t, friends)
+	assert.EqualError(t, err, expectedError.Error())
 }
 
-func TestExampleInvocation(t *testing.T) {
-	apiKeys := getAPIKeysForTesting()
-	fmt.Printf("==================== Example Invocation ====================\n")
-	ControlFunc(apiKeys, "76561198130544932", 2, 2)
-	fmt.Printf("\n")
-	ControlFunc(apiKeys, "76561198130544932", 1, 1)
-	fmt.Printf("\n")
-	ControlFunc(apiKeys, "76561198130544932", 1, 1)
-	fmt.Printf("============================================================\n")
+func TestIsEnvVarSetWithValidEnvVar(t *testing.T) {
+	os.Setenv("examplevariable", "thisIsSet")
+	exists := IsEnvVarSet("examplevariable")
+
+	assert.True(t, exists)
 }
 
-func TestConfigInit(t *testing.T) {
-	APIKeys := getAPIKeysForTesting()
-	// Regular invocation
-	fmt.Printf("\n\n")
-	testConfig := CrawlerConfig{
-		Level:    1,
-		StatMode: false,
-		TestKeys: false,
-		Workers:  1,
-		APIKeys:  APIKeys,
-	}
-	InitCrawling(testConfig, "76561198282036055")
-	fmt.Printf("\n")
-	// StatMode invocation
-	testConfig2 := CrawlerConfig{
-		Level:    1,
-		StatMode: true,
-		TestKeys: false,
-		Workers:  1,
-		APIKeys:  APIKeys,
-	}
-	InitCrawling(testConfig2, "76561198144084014")
-	fmt.Printf("\n")
-	// testKeys invocation
-	testConfig3 := CrawlerConfig{
-		Level:    1,
-		StatMode: false,
-		TestKeys: true,
-		Workers:  1,
-		APIKeys:  APIKeys,
-	}
-	InitCrawling(testConfig3, "76561198144084014")
-	fmt.Printf("\n\n")
+func TestIsEnvVarSetWithInvalidEnvVar(t *testing.T) {
+	exists := IsEnvVarSet("nonexistantvariable")
+
+	assert.False(t, exists)
 }
