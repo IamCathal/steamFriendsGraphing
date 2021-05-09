@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/go-echarts/go-echarts/charts"
+	"github.com/steamFriendsGraphing/configuration"
 	"github.com/steamFriendsGraphing/graphing"
 	"github.com/steamFriendsGraphing/server"
 	"github.com/steamFriendsGraphing/util"
@@ -22,7 +23,9 @@ func main() {
 	flag.Parse()
 
 	cntr := util.Controller{}
-	util.SetBaseWorkingDirectory()
+
+	util.SetConfig(configuration.InitConfig("normal"))
+	worker.SetConfig(configuration.InitConfig("normal"))
 
 	if *httpserver {
 		server.RunServer("8080")

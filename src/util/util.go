@@ -13,12 +13,16 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+
+	"github.com/steamFriendsGraphing/configuration"
 )
 
 var (
 	Green = "\033[32m"
 	Red   = "\033[31m"
 	White = "\033[0;37m"
+
+	config configuration.Info
 )
 
 type Controller struct{}
@@ -42,8 +46,10 @@ func (controller Controller) OpenFile(fileName string) (*os.File, error) {
 }
 
 func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error) {
+	fmt.Println("REMOTE")
 	var friendsObj FriendsStruct
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", url.QueryEscape(apiKey), url.QueryEscape(steamID))
+	fmt.Printf("calling %s\n", targetURL)
 	res, err := http.Get(targetURL)
 	if err != nil {
 		return friendsObj, err
@@ -81,19 +87,20 @@ func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStat
 	return userStatsObj, nil
 }
 
-func (control Controller) FileExists(steamID string) bool {
-	cacheFolder := ""
-	if exists := IsEnvVarSet("testing"); exists {
-		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
-	} else {
-		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
-	}
+func (control Controller) FileExists(fileName string) bool {
+	fmt.Printf("scanning for %s\n", fileName)
 
-	_, err := os.Stat(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
+	_, err := os.Stat(fileName)
 	if os.IsNotExist(err) {
+		fmt.Println("brrrrrr not exist")
 		return false
 	}
+	fmt.Println("brrrrrr DOES exist")
 	return true
+}
+
+func SetConfig(appConfig configuration.Info) {
+	config = appConfig
 }
 
 // GetPlayerSummary gets a player summary through the steam web API
@@ -237,7 +244,8 @@ func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
 	}
 
 	// APIKEYS.txt MUST be in the root directory of the project
-	APIKeysLocation := fmt.Sprintf("%s/../APIKEYS.txt", os.Getenv("BWD"))
+	APIKeysLocation := config.ApiKeysFileLocation
+	fmt.Printf("apiKeys: %s\n", APIKeysLocation)
 	apiKeys := make([]string, 0)
 
 	file, err := cntr.OpenFile(APIKeysLocation)
