@@ -245,7 +245,6 @@ func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
 
 	// APIKEYS.txt MUST be in the root directory of the project
 	APIKeysLocation := config.ApiKeysFileLocation
-	fmt.Printf("apiKeys: %s\n", APIKeysLocation)
 	apiKeys := make([]string, 0)
 
 	file, err := cntr.OpenFile(APIKeysLocation)

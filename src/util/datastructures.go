@@ -36,6 +36,7 @@ type Player struct {
 	Personastateflags        int    `json:"personastateflags"`
 	Loccountrycode           string `json:"loccountrycode"`
 }
+
 type Response struct {
 	Players []Player `json:"players"`
 }
