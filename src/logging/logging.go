@@ -33,7 +33,6 @@ func CheckErr(err error) {
 
 func SpecialLog(msg string) {
 	logsFolder := config.LogsFolderLocation
-	fmt.Println("writing to file")
 	if logsFolder == "" {
 		util.ThrowErr(errors.New("config.LogsFolderLocation was not initialised before attempting to write to file"))
 	}
