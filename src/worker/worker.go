@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/segmentio/ksuid"
+	"github.com/steamFriendsGraphing/configuration"
 	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/util"
 )
@@ -50,6 +52,14 @@ type CrawlerConfig struct {
 	TestKeys bool
 	Workers  int
 	APIKeys  []string
+}
+
+var (
+	config configuration.Info
+)
+
+func SetConfig(appConfig configuration.Info) {
+	config = appConfig
 }
 
 // InitWorkerConfig initialises the worker based on the level and worker amount given
@@ -166,8 +176,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 		var temp util.FriendsStruct
 		return temp, fmt.Errorf("invalid steamID %s, apikey %s\n", steamID, apiKey)
 	}
-
-	friendsObj, err := cntr.CallGetFriendsListAPI(url.QueryEscape(apiKey), url.QueryEscape(steamID))
+	friendsObj, err := cntr.CallGetFriendsListAPI(url.QueryEscape(steamID), url.QueryEscape(apiKey))
 	if err != nil {
 		var temp util.FriendsStruct
 		LogCall("GET", steamID, friendsObj.Username, "400", util.Red, startTime)
@@ -258,7 +267,6 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 	username, err := util.GetUsername(cntr, apiKey, steamID)
 	util.CheckErr(err)
 	friendsObj.Username = username
-
 	WriteToFile(cntr, apiKey, steamID, friendsObj)
 
 	// log the request along the round trip delay
@@ -362,11 +370,9 @@ func LogCall(method, steamID, username, status, statusColor string, startTime in
 
 // WriteToFile writes a user's friendlist to a file for later processing
 func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends util.FriendsStruct) {
-	cacheFolder := ""
-	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
-	} else {
-		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
+	cacheFolder := config.CacheFolderLocation
+	if cacheFolder == "" {
+		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	if existing := CacheFileExists(cntr, steamID); !existing {
@@ -386,16 +392,9 @@ func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends 
 // GetCache gets a user's cached records if it exists
 func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct, error) {
 	var temp util.FriendsStruct
-	cacheFolder := ""
-	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
-	} else {
-		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
-	}
+	cacheFolder := config.CacheFolderLocation
 
 	if exists := CacheFileExists(cntr, steamID); exists {
-		fmt.Println("it exists")
-
 		file, err := cntr.OpenFile(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		defer file.Close()
 		if err != nil {
@@ -414,7 +413,6 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 		_ = json.Unmarshal([]byte(res), &temp)
 		return temp, nil
 	}
-	fmt.Println("does not exist")
 
 	return temp, fmt.Errorf("Cache file %s.gz does not exist", steamID)
 }
@@ -423,11 +421,9 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 // e.g 76561198063271448 -> moose
 func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (string, error) {
 	var temp util.FriendsStruct
-	cacheFolder := ""
-	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
-	} else {
-		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
+	cacheFolder := config.CacheFolderLocation
+	if cacheFolder == "" {
+		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	if exists := CacheFileExists(cntr, steamID); exists {
@@ -464,11 +460,9 @@ func IsEnvVarSet(envvar string) bool {
 
 // CacheFileExists checks whether a given cached file exists
 func CacheFileExists(cntr util.ControllerInterface, steamID string) bool {
-	cacheFolder := ""
-	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = fmt.Sprintf("%stestData", os.Getenv("BWD"))
-	} else {
-		cacheFolder = fmt.Sprintf("%suserData", os.Getenv("BWD"))
+	cacheFolder := config.CacheFolderLocation
+	if cacheFolder == "" {
+		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	return cntr.FileExists(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))

@@ -49,31 +49,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// func TestInitWorkerConfig(t *testing.T) {
-// 	// _, err := os.Stat("../testData")
-// 	// if os.IsNotExist(err) {
-// 	// 	fmt.Println(":: ../testData [TestInitWorkerConfig] DOES NOT EXIST -------------------")
-// 	// } else {
-// 	// 	fmt.Println(":: ../testData [TestInitWorkerConfig] DOES EXIST +++++++++++++++++++++++")
-// 	// }
-
-// 	_, err := InitWorkerConfig(4, 15)
-// 	assert.Nil(t, err)
-
-// 	_, err = InitWorkerConfig(-2, 20)
-// 	assert.NotNil(t, err, "failed to catch invalid levelCap of -2")
-
-// 	_, err = InitWorkerConfig(2, 625)
-// 	if err == nil {
-// 		t.Errorf("failed to catch invalid worker amount of of 625")
-// 	}
-
-// 	_, err = InitWorkerConfig(2, 0)
-// 	if err == nil {
-// 		t.Errorf("failed to catch invalid worker amount of 0")
-// 	}
-// }
-
 func TestDivmod(t *testing.T) {
 	testNumber := 140
 
