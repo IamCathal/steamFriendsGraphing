@@ -469,8 +469,12 @@ func CacheFileExists(cntr util.ControllerInterface, steamID string) bool {
 }
 
 func LoadMappings() map[string]string {
+	urlMapLocation := config.UrlMappingsLocation
+	if urlMapLocation == "" {
+		util.ThrowErr(errors.New("config.UrlMappingsLocation was not initialised before attempting to load url mappings"))
+	}
 	urlMap := make(map[string]string)
-	byteContent, err := ioutil.ReadFile(fmt.Sprintf("%s/../config/urlMappings.txt", os.Getenv("BWD")))
+	byteContent, err := ioutil.ReadFile(urlMapLocation)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -494,11 +498,15 @@ func LoadMappings() map[string]string {
 }
 
 func writeMappings(urlMap map[string]string) {
-	file, err := os.OpenFile(fmt.Sprintf("%s/../config/urlMappings.txt", os.Getenv("BWD")), os.O_RDWR, 0755)
-	defer file.Close()
+	urlMapLocation := config.UrlMappingsLocation
+	if urlMapLocation == "" {
+		util.ThrowErr(errors.New("config.UrlMappingsLocation was not initialised before attempting to write url mappings"))
+	}
+	file, err := os.OpenFile(urlMapLocation, os.O_RDWR, 0755)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer file.Close()
 	file.Seek(0, 0)
 	for key, _ := range urlMap {
 		_, err = file.WriteString(fmt.Sprintf("%s:%s\n", key, urlMap[key]))

@@ -46,7 +46,6 @@ func (controller Controller) OpenFile(fileName string) (*os.File, error) {
 }
 
 func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error) {
-	fmt.Println("REMOTE")
 	var friendsObj FriendsStruct
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", url.QueryEscape(apiKey), url.QueryEscape(steamID))
 	fmt.Printf("calling %s\n", targetURL)
@@ -82,20 +81,15 @@ func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStat
 		return userStatsObj, err
 	}
 
-	fmt.Println("REMOTE REMOTE REMOTE")
 	json.Unmarshal(res, &userStatsObj)
 	return userStatsObj, nil
 }
 
 func (control Controller) FileExists(fileName string) bool {
-	fmt.Printf("scanning for %s\n", fileName)
-
 	_, err := os.Stat(fileName)
 	if os.IsNotExist(err) {
-		fmt.Println("brrrrrr not exist")
 		return false
 	}
-	fmt.Println("brrrrrr DOES exist")
 	return true
 }
 
@@ -107,11 +101,11 @@ func SetConfig(appConfig configuration.Info) {
 func GetPlayerSummary(cntr ControllerInterface, steamID, apiKey string) (Player, error) {
 	userStatsObj, err := cntr.CallPlayerSummaryAPI(steamID, apiKey)
 	if err != nil {
-		return userStatsObj.Response.Players[0], err
+		return Player{}, err
 	}
 
 	if len(userStatsObj.Response.Players) == 0 {
-		return userStatsObj.Response.Players[0], fmt.Errorf("invalid steamID %s given", steamID)
+		return Player{}, fmt.Errorf("invalid steamID %s given", steamID)
 	}
 	return userStatsObj.Response.Players[0], nil
 }

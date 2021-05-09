@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/go-echarts/go-echarts/charts"
 	"github.com/steamFriendsGraphing/configuration"
 	"github.com/steamFriendsGraphing/graphing"
+	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/server"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/steamFriendsGraphing/worker"
@@ -24,8 +26,11 @@ func main() {
 
 	cntr := util.Controller{}
 
-	util.SetConfig(configuration.InitConfig("normal"))
-	worker.SetConfig(configuration.InitConfig("normal"))
+	appConfig := configuration.InitConfig("normal")
+
+	util.SetConfig(appConfig)
+	worker.SetConfig(appConfig)
+	logging.SetConfig(appConfig)
 
 	if *httpserver {
 		server.RunServer("8080")
@@ -54,12 +59,14 @@ func main() {
 
 	if config.StatMode {
 		for _, steamID := range steamIDs {
-			resMap, err := util.GetUserDetails(cntr, config.APIKeys[0], steamID)
+			userDetails, err := util.GetUserDetails(cntr, config.APIKeys[0], steamID)
 			util.CheckErr(err)
 
-			for k, v := range resMap {
-				fmt.Printf("%13s: %s\n", k, v)
-			}
+			fmt.Printf("SteamID:\t%s\n", userDetails.Steamid)
+			fmt.Printf("Username:\t%s\n", userDetails.Personaname)
+			fmt.Printf("TimeCreated:\t%s\n", time.Unix(int64(userDetails.Timecreated), 0))
+			fmt.Printf("ProfileURL:\t%s\n", userDetails.Profileurl)
+			fmt.Printf("AvatarURL:\t%s\n", userDetails.Avatarfull)
 			fmt.Printf("\n")
 		}
 		return

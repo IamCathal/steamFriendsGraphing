@@ -3,7 +3,6 @@
 package util
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -16,7 +15,8 @@ import (
 )
 
 var (
-	validUserSummaryResponse UserStatsStruct
+	expectedGetPlayerSummaryUser UserStatsStruct
+	expectedUserStats            Player
 )
 
 func TestMain(m *testing.M) {
@@ -32,28 +32,32 @@ func TestMain(m *testing.M) {
 }
 
 func setupStubs() {
-	validUserSummaryResponse = UserStatsStruct{
+	expectedGetPlayerSummaryUser = UserStatsStruct{
 		Response: Response{
 			Players: []Player{
 				{
-					Steamid:     "76561198076045001",
-					Timecreated: 0,
-					Personaname: "expected persona name",
+					Avatarfull:   "expected full avatar url",
+					Profileurl:   "expected profile url",
+					Profilestate: 1,
+					Realname:     "Francis Higgins",
+					Steamid:      "76561198076045001",
+					Personaname:  "expected persona name",
 				},
 			},
 		},
 	}
+	expectedUserStats = expectedGetPlayerSummaryUser.Response.Players[0]
 }
 
 func TestGetPlayerSummary(t *testing.T) {
 	mockController := &MockControllerInterface{}
 
-	expectedSteamID := validUserSummaryResponse.Response.Players[0].Steamid
-	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(validUserSummaryResponse, nil)
+	expectedSteamID := expectedUserStats.Steamid
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(expectedGetPlayerSummaryUser, nil)
 
 	receivedUserDetails, _ := GetPlayerSummary(mockController, expectedSteamID, "test API key")
 
-	assert.Equal(t, validUserSummaryResponse, receivedUserDetails)
+	assert.Equal(t, expectedUserStats, receivedUserDetails)
 }
 
 func TestGetPlayerSummaryWithInvalidAPIResponse(t *testing.T) {
@@ -87,13 +91,11 @@ func TestValidGetUserDetails(t *testing.T) {
 	mockController := &MockControllerInterface{}
 	steamID := "search steamID"
 
-	expectedUser := validUserSummaryResponse.Response.Players[0]
-
-	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(validUserSummaryResponse, nil)
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(expectedGetPlayerSummaryUser, nil)
 	receivedUser, _ := GetUserDetails(mockController, "example API key", steamID)
 
 	assert.NotNil(t, receivedUser, "expect to receive mocked user")
-	assert.Equal(t, receivedUser["SteamID"], expectedUser.Steamid)
+	assert.Equal(t, receivedUser.Steamid, expectedUserStats.Steamid)
 }
 
 func TestGetUserDetailsForNonExistantUser(t *testing.T) {
@@ -116,8 +118,8 @@ func TestGetUsernameValidFormatSteamID(t *testing.T) {
 	apiKeys := []string{"test API key"}
 	steamID := "76561197960287930"
 
-	expectedUsername := validUserSummaryResponse.Response.Players[0].Personaname
-	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(validUserSummaryResponse, nil)
+	expectedUsername := expectedUserStats.Personaname
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(expectedGetPlayerSummaryUser, nil)
 
 	receivedUsername, err := GetUsername(mockController, apiKeys[0], steamID)
 	assert.Nil(t, err, fmt.Sprintf("can't get username for user: %s using key: %s", steamID, apiKeys[0]))
@@ -129,7 +131,7 @@ func TestGetUsernameWithInvalidFormatSteamID(t *testing.T) {
 	apiKeys := []string{"test API key"}
 	steamID := "invalid format SteamID"
 
-	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(validUserSummaryResponse, nil)
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(expectedUserStats, nil)
 
 	_, err := GetUsername(mockController, apiKeys[0], steamID)
 	assert.NotNil(t, err, "didn't throw error for GetUsername call with invalid steamID: ", steamID)
@@ -218,9 +220,8 @@ func TestGetAPIKeys(t *testing.T) {
 	defer os.Remove(file.Name())
 	file.WriteString("apiKey1\napiKey2\napiKey3")
 	file.Seek(0, 0)
-	scanner := bufio.NewScanner(file)
 
-	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(scanner, nil)
+	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(file, nil)
 
 	apiKeys, err := GetAPIKeys(mockController)
 
@@ -236,9 +237,8 @@ func TestGetAPIKeysWithEmptyAPIKeysFile(t *testing.T) {
 		log.Fatal(err)
 	}
 	defer os.Remove(file.Name())
-	scanner := bufio.NewScanner(file)
 
-	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(scanner, nil)
+	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(file, nil)
 
 	apiKeys, err := GetAPIKeys(mockController)
 
