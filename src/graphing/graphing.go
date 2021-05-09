@@ -328,7 +328,6 @@ func (gData *GraphData) Render(fileName string) {
 	file, err := os.Create(fmt.Sprintf("%s.html", fileName))
 	CheckErr(err)
 	gData.EchartsGraph.Render(file)
-	fmt.Println("Wrote to " + fileName + ".html file")
 }
 
 func InitGraphing(level, workers int, steamID string) *GraphData {
