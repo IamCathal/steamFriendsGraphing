@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	config configuration.Info
+	config  configuration.Info
+	apiKeys []string
 )
 
 func getAPIKeysForTesting() []string {
@@ -38,20 +39,16 @@ func getAPIKeysForTesting() []string {
 }
 
 func TestMain(m *testing.M) {
-	// os.Setenv("testing", "")
-	// path, err := os.Getwd()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// os.Setenv("BWD", fmt.Sprintf("%s/../", path))
-
-	// os.RemoveAll(fmt.Sprintf("%s../testData", os.Getenv("BWD")))
-
+	// Setup apikeys and config or all tests
 	config := configuration.InitConfig("testing")
 
-	util.SetConfig(configuration.InitConfig("testing"))
-	worker.SetConfig(configuration.InitConfig("testing"))
-	logging.SetConfig(configuration.InitConfig("testing"))
+	// Initialise config for all packages that interact
+	// with either log or cache files
+	util.SetConfig(config)
+	worker.SetConfig(config)
+	logging.SetConfig(config)
+
+	apiKeys = getAPIKeysForTesting()
 
 	os.RemoveAll(config.CacheFolderLocation)
 	// Create test directories for logs and data
@@ -84,26 +81,4 @@ func TestGetUsernameFromCacheFile(t *testing.T) {
 	usernameOfTargetUser, err := worker.GetUsernameFromCacheFile(cntr, targetSteamID)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedUsername, usernameOfTargetUser)
-	// if err != nil {
-	// 	if !test.shouldFail {
-	// 		t.Errorf("didn't fail to get username for %s", test.steamID)
-	// 	}
-	// } else if test.shouldFail {
-	// 	t.Error("caught misbehaving testcase",
-	// 		"SteamID:", test.steamID,
-	// 	)
-	// }
-
-	// for _, elem := range tests {
-	// 	_, err := worker.GetUsernameFromCacheFile(elem.steamID)
-	// 	if err != nil {
-	// 		if !elem.shouldFail {
-	// 			t.Errorf("didn't fail to get username for %s", elem.steamID)
-	// 		}
-	// 	} else if elem.shouldFail {
-	// 		t.Error("caught misbehaving testcase",
-	// 			"SteamID:", elem.steamID,
-	// 		)
-	// 	}
-	// }
 }
