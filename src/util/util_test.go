@@ -259,6 +259,11 @@ func TestGetAPIKeysFromGitHubActionsSecretsOverridesLocalAPIKeysFile(t *testing.
 }
 
 func TestGetAPIKeysWithEmptyAPIKeysFile(t *testing.T) {
+	// If being run on github actions the injected API key secrets
+	// override these values
+	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
+		return
+	}
 	mockController := &MockControllerInterface{}
 
 	file, err := ioutil.TempFile("", "tempAPIKeys.txt")
@@ -277,6 +282,11 @@ func TestGetAPIKeysWithEmptyAPIKeysFile(t *testing.T) {
 }
 
 func TestGetAPIKeysWithNonExistantAPIKeysFile(t *testing.T) {
+	// If being run on github actions the injected API key secrets
+	// override these values
+	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
+		return
+	}
 	mockController := &MockControllerInterface{}
 
 	expectedErr := errors.New("can't find file error")
