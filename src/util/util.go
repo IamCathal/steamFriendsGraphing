@@ -72,7 +72,6 @@ func (controller Controller) OpenFile(fileName string, flag int, perm os.FileMod
 func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error) {
 	var friendsObj FriendsStruct
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", url.QueryEscape(apiKey), url.QueryEscape(steamID))
-	fmt.Printf("calling %s\n", targetURL)
 	res, err := http.Get(targetURL)
 	if err != nil {
 		return friendsObj, err

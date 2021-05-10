@@ -63,16 +63,18 @@ Tests are split into two groups; service and integration. Heres how to run each 
 | ----------- |:-------------------------------------------------------:| 
 | Service     | `cd src && go test -v ./... --tags=service`             |
 | Integration | `cd src && go test -v ./... --tags=integration`         |
-| All         | `cd src && go test -v ./... --tags=service,integration` |
+| All         | `cd src && go test -v ./... --tags=service,integration -p 1` |
 
 My personal githook runs all service tests before committing. Heres an example
 ```bash
 #!/bin/bash
 cd prjectDirectory
-gotest -v ./... -tags=service 
+go test -v ./... -tags=service 
 ```
 
 For personal testing I use this command. It runs the tests for all the packages and automatically opens a chrome tab with the coverage report.
 ```
-go test -v -p 1 ./... -cover -coverprofile=coverage.out --tags=service,integration && go tool cover -html=coverage.out -o coverage.html && google-chrome coverage.html
+go test -v -p 1 ./... -cover -coverprofile=coverage.out --tags=service,integration && \ 
+  go tool cover -html=coverage.out -o coverage.html && \
+    google-chrome coverage.html
 ```
