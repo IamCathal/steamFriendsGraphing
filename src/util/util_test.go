@@ -210,7 +210,12 @@ func TestGetAndReadWithInvalidURL(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestGetAPIKeys(t *testing.T) {
+func TestGetAPIKeysFromLocalFile(t *testing.T) {
+	// If being run on github actions the injected API key secrets
+	// override these values
+	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
+		return
+	}
 	mockController := &MockControllerInterface{}
 
 	file, err := ioutil.TempFile("", "tempAPIKeys.txt")
@@ -219,10 +224,7 @@ func TestGetAPIKeys(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	// When on github actions two keys will be returned
-	// so its easier to just test two keys so this test will
-	// pass on local and actions environments
-	file.WriteString("apiKey1\napiKey2")
+	file.WriteString("apiKey1\napiKey2\napiKey3")
 	file.Seek(0, 0)
 
 	mockController.On("Open", mock.AnythingOfType("string")).Return(file, nil)
@@ -230,7 +232,30 @@ func TestGetAPIKeys(t *testing.T) {
 	apiKeys, err := GetAPIKeys(mockController)
 
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"apiKey1", "apiKey2"}, apiKeys)
+	assert.Equal(t, []string{"apiKey1", "apiKey2", "apiKey3"}, apiKeys)
+}
+
+func TestGetAPIKeysFromGitHubActionsSecretsOverridesLocalAPIKeysFile(t *testing.T) {
+	if exists := IsEnvVarSet("GITHUBACTIONS"); !exists {
+		return
+	}
+	mockController := &MockControllerInterface{}
+
+	file, err := ioutil.TempFile("", "tempAPIKeys.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	file.WriteString("apiKey1\napiKey2\napiKey3")
+	file.Seek(0, 0)
+
+	mockController.On("Open", mock.AnythingOfType("string")).Return(file, nil)
+
+	apiKeys, err := GetAPIKeys(mockController)
+
+	assert.Nil(t, err)
+	assert.Equal(t, []string{os.Getenv("APIKEY"), os.Getenv("APIKEY1")}, apiKeys)
 }
 
 func TestGetAPIKeysWithEmptyAPIKeysFile(t *testing.T) {
