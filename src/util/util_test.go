@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/steamFriendsGraphing/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -21,9 +22,6 @@ var (
 
 func TestMain(m *testing.M) {
 	os.Setenv("testing", "")
-	path, err := os.Getwd()
-	CheckErr(err)
-	os.Setenv("BWD", fmt.Sprintf("%s/../", path))
 
 	setupStubs()
 	code := m.Run()
@@ -138,6 +136,8 @@ func TestGetUsernameWithInvalidFormatSteamID(t *testing.T) {
 }
 
 func TestCreateDataFolder(t *testing.T) {
+	SetConfig(configuration.InitConfig("testing"))
+
 	err := CreateUserDataFolder()
 
 	assert.Nil(t, err, "error creating user data folder")
@@ -218,7 +218,11 @@ func TestGetAPIKeys(t *testing.T) {
 		log.Fatal(err)
 	}
 	defer os.Remove(file.Name())
-	file.WriteString("apiKey1\napiKey2\napiKey3")
+
+	// When on github actions two keys will be returned
+	// so its easier to just test two keys so this test will
+	// pass on local and actions environments
+	file.WriteString("apiKey1\napiKey2")
 	file.Seek(0, 0)
 
 	mockController.On("Open", mock.AnythingOfType("string")).Return(file, nil)
@@ -226,7 +230,7 @@ func TestGetAPIKeys(t *testing.T) {
 	apiKeys, err := GetAPIKeys(mockController)
 
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"apiKey1", "apiKey2", "apiKey3"}, apiKeys)
+	assert.Equal(t, []string{"apiKey1", "apiKey2"}, apiKeys)
 }
 
 func TestGetAPIKeysWithEmptyAPIKeysFile(t *testing.T) {

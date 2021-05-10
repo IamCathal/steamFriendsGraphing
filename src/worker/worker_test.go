@@ -162,7 +162,7 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 		t.Error(err)
 	}
 	defer os.Remove(tempLogFile.Name())
-	mockController.On("OpenFile", expectedLogsFile, mock.AnythingOfType("int"), mock.AnythingOfType("os.FileMode")).Return(tempLogFile, nil)
+	mockController.On("OpenFile", expectedLogsFile, mock.Anything, mock.Anything).Return(tempLogFile, nil)
 
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
 	mockController.On("CallGetFriendsListAPI", originalUserSteamID, mock.AnythingOfType("string")).Return(friendsInfoForOriginalUser, nil)

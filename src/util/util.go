@@ -164,11 +164,9 @@ func GetUserDetails(cntr ControllerInterface, apiKey, steamID string) (Player, e
 // CreateUserDataFolder creates a folder for holding cache.
 // Can either be userData for regular use or testData when running under github actions.
 func CreateUserDataFolder() error {
-	cacheFolder := ""
-	if exists := IsEnvVarSet("testing"); exists {
-		cacheFolder = fmt.Sprintf("%s/testData", os.Getenv("BWD"))
-	} else {
-		cacheFolder = fmt.Sprintf("%s/userData", os.Getenv("BWD"))
+	cacheFolder := config.CacheFolderLocation
+	if cacheFolder == "" {
+		ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	if _, err := os.Stat(cacheFolder); os.IsNotExist(err) {
