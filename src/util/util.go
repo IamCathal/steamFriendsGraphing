@@ -2,6 +2,7 @@ package util
 
 import (
 	"bufio"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,14 +34,37 @@ type ControllerInterface interface {
 	CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error)
 
 	FileExists(steamID string) bool
-	OpenFile(fileName string) (*os.File, error)
+	Open(fileName string) (*os.File, error)
+	OpenFile(fileName string, flag int, perm os.FileMode) (*os.File, error)
+	CreateFile(fileName string) (*os.File, error)
+	WriteGzip(file *os.File, content string) error
 }
 
-func (controller Controller) OpenFile(fileName string) (*os.File, error) {
+func (controller Controller) Open(fileName string) (*os.File, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		errorMsg := fmt.Sprintf("failed to open %s", fileName)
 		return nil, errors.New(errorMsg)
+	}
+	return file, nil
+}
+
+func (controller Controller) CreateFile(fileName string) (*os.File, error) {
+	file, err := os.Create(fileName)
+	return file, err
+}
+
+func (controller Controller) WriteGzip(file *os.File, content string) error {
+	w := gzip.NewWriter(file)
+	_, err := w.Write([]byte(content))
+	defer w.Close()
+	return err
+}
+
+func (controller Controller) OpenFile(fileName string, flag int, perm os.FileMode) (*os.File, error) {
+	file, err := os.OpenFile(fileName, flag, perm)
+	if err != nil {
+		return nil, err
 	}
 	return file, nil
 }
@@ -241,7 +265,7 @@ func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
 	APIKeysLocation := config.ApiKeysFileLocation
 	apiKeys := make([]string, 0)
 
-	file, err := cntr.OpenFile(APIKeysLocation)
+	file, err := cntr.Open(APIKeysLocation)
 	if err != nil {
 		return apiKeys, err
 	}

@@ -221,7 +221,7 @@ func TestGetAPIKeys(t *testing.T) {
 	file.WriteString("apiKey1\napiKey2\napiKey3")
 	file.Seek(0, 0)
 
-	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(file, nil)
+	mockController.On("Open", mock.AnythingOfType("string")).Return(file, nil)
 
 	apiKeys, err := GetAPIKeys(mockController)
 
@@ -238,7 +238,7 @@ func TestGetAPIKeysWithEmptyAPIKeysFile(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(file, nil)
+	mockController.On("Open", mock.AnythingOfType("string")).Return(file, nil)
 
 	apiKeys, err := GetAPIKeys(mockController)
 
@@ -251,7 +251,7 @@ func TestGetAPIKeysWithNonExistantAPIKeysFile(t *testing.T) {
 	mockController := &MockControllerInterface{}
 
 	expectedErr := errors.New("can't find file error")
-	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(nil, expectedErr)
+	mockController.On("Open", mock.AnythingOfType("string")).Return(nil, expectedErr)
 
 	apiKeys, err := GetAPIKeys(mockController)
 

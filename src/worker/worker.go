@@ -165,21 +165,21 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 			if err != nil {
 				return friendsObj, err
 			}
-			LogCall("GET", steamID, friendsObj.Username, "200", util.Green, startTime)
+			LogCall(cntr, "GET", steamID, friendsObj.Username, "200", util.Green, startTime)
 			return friendsObj, nil
 		}
 	}
 
 	// Check to see if the steamID is in the valid format now to save time
 	if valid := util.IsValidFormatSteamID(steamID); !valid {
-		LogCall("GET", steamID, "Invalid SteamID", "400", util.Red, startTime)
+		LogCall(cntr, "GET", steamID, "Invalid SteamID", "400", util.Red, startTime)
 		var temp util.FriendsStruct
 		return temp, fmt.Errorf("invalid steamID %s, apikey %s\n", steamID, apiKey)
 	}
 	friendsObj, err := cntr.CallGetFriendsListAPI(url.QueryEscape(steamID), url.QueryEscape(apiKey))
 	if err != nil {
 		var temp util.FriendsStruct
-		LogCall("GET", steamID, friendsObj.Username, "400", util.Red, startTime)
+		LogCall(cntr, "GET", steamID, friendsObj.Username, "400", util.Red, startTime)
 		return temp, err
 	}
 
@@ -270,7 +270,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 	WriteToFile(cntr, apiKey, steamID, friendsObj)
 
 	// log the request along the round trip delay
-	LogCall(fmt.Sprintf("GET [%d][%d]", level, len(jobs)), steamID, friendsObj.Username, "200", util.Green, startTime)
+	LogCall(cntr, fmt.Sprintf("GET [%d][%d]", level, len(jobs)), steamID, friendsObj.Username, "200", util.Green, startTime)
 	return friendsObj, nil
 }
 
@@ -358,13 +358,13 @@ func Divmod(numerator, denominator int) (quotient, remainder int) {
 }
 
 // LogCall logs a call to the API with various stats on the request
-func LogCall(method, steamID, username, status, statusColor string, startTime int64) {
+func LogCall(cntr util.ControllerInterface, method, steamID, username, status, statusColor string, startTime int64) {
 	endTime := time.Now().UnixNano() / int64(time.Millisecond)
 	delay := strconv.FormatInt((endTime - startTime), 10)
 
 	logMsg := fmt.Sprintf("%s [%s] %s %s%s%s %vms\n", method, steamID, username,
 		statusColor, status, "\033[0m", delay)
-	logging.SpecialLog(logMsg)
+	logging.SpecialLog(cntr, logMsg)
 	fmt.Printf("%s", logMsg)
 }
 
@@ -376,16 +376,14 @@ func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends 
 	}
 
 	if existing := CacheFileExists(cntr, steamID); !existing {
-		file, err := os.Create(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
+		file, err := cntr.CreateFile(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		util.CheckErr(err)
 		defer file.Close()
 
 		jsonObj, err := json.Marshal(friends)
 		util.CheckErr(err)
 
-		w := gzip.NewWriter(file)
-		w.Write([]byte(jsonObj))
-		w.Close()
+		cntr.WriteGzip(file, string(jsonObj))
 	}
 }
 
@@ -395,7 +393,7 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 	cacheFolder := config.CacheFolderLocation
 
 	if exists := CacheFileExists(cntr, steamID); exists {
-		file, err := cntr.OpenFile(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
+		file, err := cntr.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		defer file.Close()
 		if err != nil {
 			log.Fatal(err)

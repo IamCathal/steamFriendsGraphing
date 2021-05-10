@@ -5,47 +5,27 @@ package worker
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"testing"
 
+	"github.com/steamFriendsGraphing/configuration"
+	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestMain(m *testing.M) {
-	os.Setenv("testing", "")
-	path, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.Setenv("BWD", fmt.Sprintf("%s/../", path))
-
-	// fmt.Println("worker_test")
-	// fmt.Println(":: RemoveAll ../testData")
-	// os.RemoveAll("../testData")
-
-	// fmt.Println(":: Mkdir ../testData")
-	os.Mkdir("../testData", 0755)
-	// fmt.Println(":: Mkdir ../testLogs")
-	os.Mkdir("../testLogs", 0755)
-
-	// files, err := ioutil.ReadDir("../")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println("worker_test THE FILES IN ABOVE DIR")
-	// for _, f := range files {
-	// 	fmt.Println(f.Name())
-	// }
-	// fmt.Printf("\n\n")
+	config = configuration.InitConfig("testing")
+	// Initialise config for all packages that interact
+	// with either log or cache files
+	util.SetConfig(config)
+	SetConfig(config)
+	logging.SetConfig(config)
 
 	code := m.Run()
 
-	os.RemoveAll("../testData")
-	os.RemoveAll("../testLogs")
 	os.Exit(code)
 }
 
@@ -102,6 +82,9 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 	frenchToastSteamID := "008"
 	frenchToastUsername := "toasteen"
 	frenchToastFriendsSince := 8
+
+	// Create a folder to hold the logfile generated
+	os.Mkdir(config.LogsFolderLocation, 0755)
 
 	apiKeys := []string{"apiKey1", "apiKey2"}
 	jobs := make(chan JobsStruct, 100)
@@ -168,8 +151,21 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 	}
 
 	os.Setenv("CURRTARGET", testCase.steamID)
+
+	fakeCacheFile := os.File{}
+	mockController.On("CreateFile", mock.AnythingOfType("string")).Return(&fakeCacheFile, nil)
+	mockController.On("WriteGzip", mock.AnythingOfType("*os.File"), mock.AnythingOfType("string")).Return(nil)
+
+	expectedLogsFile := fmt.Sprintf("%s/%s.txt", config.LogsFolderLocation, testCase.steamID)
+	tempLogFile, err := os.Create(expectedLogsFile)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(tempLogFile.Name())
+	mockController.On("OpenFile", expectedLogsFile, mock.AnythingOfType("int"), mock.AnythingOfType("os.FileMode")).Return(tempLogFile, nil)
+
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
-	mockController.On("CallGetFriendsListAPI", mock.AnythingOfType("string"), originalUserSteamID).Return(friendsInfoForOriginalUser, nil)
+	mockController.On("CallGetFriendsListAPI", originalUserSteamID, mock.AnythingOfType("string")).Return(friendsInfoForOriginalUser, nil)
 
 	// Used to get the friendslist of the target user
 	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(friendsInfoForOriginalUserUserStats, nil)
@@ -180,6 +176,8 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, friendsUsernamesForOriginalUser.FriendsList, friends.FriendsList)
+
+	os.RemoveAll(config.LogsFolderLocation)
 }
 
 func TestGetFriendsWithInvalidGetFriendsAPICallWhenRetrievingTargetUsersFriends(t *testing.T) {
@@ -199,16 +197,29 @@ func TestGetFriendsWithInvalidGetFriendsAPICallWhenRetrievingTargetUsersFriends(
 		false,
 	}
 
+	// Create a folder to hold the logfile generated
+	os.Mkdir(config.LogsFolderLocation, 0755)
+
 	os.Setenv("CURRTARGET", testCase.steamID)
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
 
+	expectedLogsFile := fmt.Sprintf("%s/%s.txt", config.LogsFolderLocation, testCase.steamID)
+	tempLogFile, err := os.Create(expectedLogsFile)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(tempLogFile.Name())
+	mockController.On("OpenFile", expectedLogsFile, mock.AnythingOfType("int"), mock.AnythingOfType("os.FileMode")).Return(tempLogFile, nil)
+
 	getFriendsListAPIError := errors.New("error")
-	mockController.On("CallGetFriendsListAPI", mock.AnythingOfType("string"), originalUserSteamID).Return(util.FriendsStruct{}, getFriendsListAPIError)
+	mockController.On("CallGetFriendsListAPI", originalUserSteamID, mock.AnythingOfType("string")).Return(util.FriendsStruct{}, getFriendsListAPIError)
 
 	friends, err := GetFriends(mockController, testCase.steamID, testCase.apikey, 1, jobs)
 
 	assert.Empty(t, friends)
 	assert.EqualError(t, err, getFriendsListAPIError.Error())
+
+	os.RemoveAll(config.LogsFolderLocation)
 }
 
 func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
@@ -228,6 +239,17 @@ func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
 		false,
 	}
 
+	// Create a folder to hold the logfile generated
+	os.Mkdir(config.LogsFolderLocation, 0755)
+
+	expectedLogsFile := fmt.Sprintf("%s/%s.txt", config.LogsFolderLocation, testCase.steamID)
+	tempLogFile, err := os.Create(expectedLogsFile)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(tempLogFile.Name())
+	mockController.On("OpenFile", expectedLogsFile, mock.AnythingOfType("int"), mock.AnythingOfType("os.FileMode")).Return(tempLogFile, nil)
+
 	os.Setenv("CURRTARGET", testCase.steamID)
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
 	expectedError := errors.New(fmt.Sprintf("invalid steamID %s, apikey %s\n", testCase.steamID, testCase.apikey))
@@ -236,6 +258,8 @@ func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
 
 	assert.Empty(t, friends)
 	assert.EqualError(t, err, expectedError.Error())
+
+	os.RemoveAll(config.LogsFolderLocation)
 }
 
 func TestIsEnvVarSetWithValidEnvVar(t *testing.T) {

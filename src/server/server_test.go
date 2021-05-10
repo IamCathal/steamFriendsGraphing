@@ -60,7 +60,7 @@ func TestStatLookupWithExpectedUserStats(t *testing.T) {
 
 	file := createValidAPIKEYSFile()
 
-	mockController.On("OpenFile", mock.AnythingOfType("string")).Return(file, nil)
+	mockController.On("Open", mock.AnythingOfType("string")).Return(file, nil)
 	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(expectedGetPlayerSummaryUser, nil)
 
 	urlVals, _ := url.ParseQuery("steamID0=testSteamID&statmode=true")
