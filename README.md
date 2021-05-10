@@ -9,7 +9,7 @@
   </a>
 </p>
 
-![example workflow name](https://github.com/IamCathal/steamFriendsGraphing/workflows/Go/badge.svg) ![coverage badge](src/coverage_badge.png) ![go report card badge](https://goreportcard.com/badge/github.com/iamcathal/steamfriendsgraphing)
+![example workflow name](https://github.com/IamCathal/steamFriendsGraphing/workflows/Go/badge.svg) ![go report card badge](https://goreportcard.com/badge/github.com/iamcathal/steamfriendsgraphing)
 
 ## What's the goal of this project? 
 The goal of this project is to determine the degrees of seperation between any two users on [Steam](https://store.steampowered.com/)
@@ -55,25 +55,24 @@ Now you can run the script. The easiest way is to build and then run the executa
 
 For the moment the easiest way to find your steam64ID is to use [Steam ID Finder](https://steamidfinder.com/)
 
-## How do you get that coverage badge?
+## Testing
 
-I'm using a slightly modified version of Jordan Pole's [gopherbadger](https://github.com/jpoles1/gopherbadger) in a pre-commit hook. The reason I say slightly modified is because I changed the go test command it invokes from `go test ./...` to `go test -v -p 1 ./...` . I like verbose logging and the `-p 1` refers to [this horrible phantom bug](https://github.com/IamCathal/steamFriendsGraphing/commit/341356a59bf4c0f08d1e621f8f55e3d3cad4a07d) that I spent way too much time trying to fix.
+Tests are split into two groups; service and integration. Heres how to run each set of tests:
 
-To change the badge generator you just need to make the change below to [this line](https://github.com/jpoles1/gopherbadger/blob/567925ff1e8172aa4a53570817e75a606781f52e/main.go#L136) in gopherbadger. After that you can `cd $GOPATH/src/github.com/jpoles1/gopherbadger && go build && sudo cp gopherbadger /usr/bin` and then you're good to go
-```diff
-- coverageCommand = fmt.Sprintf("go test %s/... -coverprofile=coverage.out %s && %s", config.rootFolderFlag, flagsCommands, toolCoverCommand)
-+ coverageCommand = fmt.Sprintf("go test -v -p 1 %s/... -coverprofile=coverage.out %s && %s", config.rootFolderFlag, flagsCommands, toolCoverCommand)
-```
+|             |                                                         |
+| ----------- |:-------------------------------------------------------:| 
+| Service     | `cd src && go test -v ./... --tags=service`             |
+| Integration | `cd src && go test -v ./... --tags=integration`         |
+| All         | `cd src && go test -v ./... --tags=service,integration` |
 
- The git hook itself is quite simple and looks like this:
+My personal githook runs all service tests before committing. Heres an example
 ```bash
 #!/bin/bash
-echo "Testing and generating coverage badge, this might take a few seconds"
-gopherbadger -png=true
-git add coverage_badge.png
+cd prjectDirectory
+gotest -v ./... -tags=service 
 ```
 
 For personal testing I use this command. It runs the tests for all the packages and automatically opens a chrome tab with the coverage report.
 ```
-go test -v -p 1 ./... -cover -coverprofile=coverage.out && go tool cover -html=coverage.out -o     coverage.html && google-chrome coverage.html
+go test -v -p 1 ./... -cover -coverprofile=coverage.out --tags=service,integration && go tool cover -html=coverage.out -o coverage.html && google-chrome coverage.html
 ```
