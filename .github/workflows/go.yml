@@ -26,8 +26,14 @@ jobs:
     - name: Build
       run: cd src && go build -v ./...
 
-    - name: Test
-      run: cd src && go test -v -p 1 ./...
+    - name: Service Tests
+      run: cd src && go test -v -p 1 ./... --tags=service
+      env:
+        APIKEY: ${{ secrets.APIKEY }}
+        APIKEY1: ${{ secrets.APIKEY1 }}
+        GITHUBACTIONS: ${{ secrets.GITHUBACTIONS }}
+    - name: Integration Tests
+      run: cd src && go test -v -p 1 ./... --tags=integration
       env:
         APIKEY: ${{ secrets.APIKEY }}
         APIKEY1: ${{ secrets.APIKEY1 }}
