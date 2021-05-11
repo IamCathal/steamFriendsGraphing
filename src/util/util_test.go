@@ -190,12 +190,6 @@ func TestIsValidFormatSteamIDWithInValidSteamID(t *testing.T) {
 	assert.False(t, isValid, fmt.Sprintf("expect to receive false for steamID: %s", invalidSteamID))
 }
 
-func TestSetBaseWorkingDirectory(t *testing.T) {
-	SetBaseWorkingDirectory()
-
-	assert.NotEmpty(t, os.Getenv("BWD"))
-}
-
 func TestGetAndRead(t *testing.T) {
 	testURL := "https://pastebin.com/"
 	_, err := GetAndRead(testURL)

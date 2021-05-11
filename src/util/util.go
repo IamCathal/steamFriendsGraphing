@@ -28,6 +28,9 @@ var (
 
 type Controller struct{}
 
+// ControllerInterface defines all methods that are stubbed for
+// service testing due to their dependencies with networks and
+// filesystems
 type ControllerInterface interface {
 	CallPlayerSummaryAPI(steamID, apiKey string) (UserStatsStruct, error)
 	CallIsAPIKeyValidAPI(apiKeys string) string
@@ -40,35 +43,47 @@ type ControllerInterface interface {
 	WriteGzip(file *os.File, content string) error
 }
 
+// Open opens a given file and returns a pointer to the file object. Closing
+// the file is the responsibility of the function invoking Open
 func (controller Controller) Open(fileName string) (*os.File, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		errorMsg := fmt.Sprintf("failed to open %s", fileName)
 		return nil, errors.New(errorMsg)
 	}
+
 	return file, nil
 }
 
+// Create creates a specified file. Closing the file is the responsibility of
+// the function invoking CreateFile
 func (controller Controller) CreateFile(fileName string) (*os.File, error) {
 	file, err := os.Create(fileName)
 	return file, err
 }
 
+// WriteGzip gzips a given file
 func (controller Controller) WriteGzip(file *os.File, content string) error {
 	w := gzip.NewWriter(file)
 	_, err := w.Write([]byte(content))
 	defer w.Close()
+
 	return err
 }
 
+// OpenFile opens a specified with a chosen file mode such as append, write,
+// read only etc. Closing the file is the responsibility of the function invoking OpenFile
 func (controller Controller) OpenFile(fileName string, flag int, perm os.FileMode) (*os.File, error) {
 	file, err := os.OpenFile(fileName, flag, perm)
 	if err != nil {
 		return nil, err
 	}
+
 	return file, nil
 }
 
+// CallGetFriendsListAPI calls the Steam GetFriendList API endpoint and returns the response in
+// FriendsStruct format
 func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error) {
 	var friendsObj FriendsStruct
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", url.QueryEscape(apiKey), url.QueryEscape(steamID))
@@ -92,9 +107,11 @@ func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (Frie
 	}
 
 	json.Unmarshal(body, &friendsObj)
+
 	return friendsObj, nil
 }
 
+// CallPlayerSummaryAPI calls the Steam GetPlayerSummary API endpoint
 func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStatsStruct, error) {
 	var userStatsObj UserStatsStruct
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s",
@@ -105,22 +122,41 @@ func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStat
 	}
 
 	json.Unmarshal(res, &userStatsObj)
+
 	return userStatsObj, nil
 }
 
+// CallIsAPIKeyValidAPI calls the Steam web API and it's response is used to
+// determine if the specified API key is valid
+func (control Controller) CallIsAPIKeyValidAPI(apiKey string) string {
+	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
+	res, err := http.Get(targetURL)
+	CheckErr(err)
+
+	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	CheckErr(err)
+
+	return string(body)
+}
+
+// FileExists checks is a specified file exists
 func (control Controller) FileExists(fileName string) bool {
 	_, err := os.Stat(fileName)
 	if os.IsNotExist(err) {
 		return false
 	}
+
 	return true
 }
 
+// SetConfig sets the global config used by various functions
+// to manage cache and logging folder file locations
 func SetConfig(appConfig configuration.Info) {
 	config = appConfig
 }
 
-// GetPlayerSummary gets a player summary through the steam web API
+// GetPlayerSummary gets a player summary through the Steam web API
 func GetPlayerSummary(cntr ControllerInterface, steamID, apiKey string) (Player, error) {
 	userStatsObj, err := cntr.CallPlayerSummaryAPI(steamID, apiKey)
 	if err != nil {
@@ -130,16 +166,17 @@ func GetPlayerSummary(cntr ControllerInterface, steamID, apiKey string) (Player,
 	if len(userStatsObj.Response.Players) == 0 {
 		return Player{}, fmt.Errorf("invalid steamID %s given", steamID)
 	}
+
 	return userStatsObj.Response.Players[0], nil
 }
 
-// GetUsername gets a username from a given steamID by querying the
-// steam web API
+// GetUsername gets a username from a given steamID by querying the Steam web API
 func GetUsername(cntr ControllerInterface, apiKey, steamID string) (string, error) {
 	if valid := IsValidFormatSteamID(steamID); !valid {
 		return "", fmt.Errorf("invalid steamID format: %s", steamID)
 	}
 	userStatsObj, err := GetPlayerSummary(cntr, steamID, apiKey)
+
 	return userStatsObj.Personaname, err
 }
 
@@ -151,12 +188,6 @@ func GetUserDetails(cntr ControllerInterface, apiKey, steamID string) (Player, e
 		return userStatsObj, err
 	}
 
-	// resMap := make(map[string]string)
-	// resMap["SteamID"] = userStatsObj.Response.Players[0].Steamid
-	// resMap["Username"] = userStatsObj.Response.Players[0].Personaname
-	// resMap["TimeCreated"] = fmt.Sprintf("%s", time.Unix(int64(userStatsObj.Response.Players[0].Timecreated), 0))
-	// resMap["ProfileURL"] = userStatsObj.Response.Players[0].Profileurl
-	// resMap["AvatarURL"] = userStatsObj.Response.Players[0].Avatarfull
 	return userStatsObj, nil
 }
 
@@ -197,31 +228,22 @@ func IsValidFormatSteamID(steamID string) bool {
 	return match
 }
 
-// IsValidAPIResponseForSteamId checks if a steamID is valid by calling the API
+// IsValidAPIResponseForSteamId checks if a steamID is valid based
+// off of the response from the Steam web API
 func IsValidAPIResponseForSteamId(body string) bool {
 	match, _ := regexp.MatchString("(Internal Server Error)+", body)
 	return !match
 }
 
-// IsValidResponseForAPIKey checks if the API key is invalid based off of the API
-// response
+// IsValidResponseForAPIKey checks if the API key is invalid based
+// off of the API response
 func IsValidResponseForAPIKey(body string) bool {
 	match, _ := regexp.MatchString("(Forbidden)+", body)
 	return !match
 }
 
-func (control Controller) CallIsAPIKeyValidAPI(apiKey string) string {
-	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
-	res, err := http.Get(targetURL)
-	CheckErr(err)
-
-	body, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	CheckErr(err)
-	return string(body)
-}
-
-// CheckAPIKeys checks if a given list of API keys is valid
+// CheckAPIKeys checks if a given list of API keys is valid by
+// calling the Steam web API with each key
 func CheckAPIKeys(cntr ControllerInterface, apiKeys []string) {
 	for i, apiKey := range apiKeys {
 		response := cntr.CallIsAPIKeyValidAPI(apiKey)
@@ -242,18 +264,18 @@ func CheckAPIKeys(cntr ControllerInterface, apiKeys []string) {
 	fmt.Printf("All API keys are valid!\n")
 }
 
+// IsEnvVarSet checks if a specified environment variable is set
 func IsEnvVarSet(envvar string) bool {
 	if _, exists := os.LookupEnv(envvar); exists {
 		return true
 	}
+
 	return false
 }
 
-// GetAPIKeys retrieves the API key(s) to make requests with
-// API keys must be stored in APIKEY(s).txt
+// GetAPIKeys retrieves the API key(s) to make requests with. API keys must
+// be stored in APIKEYS.txt must be saved in the root directory of the projecy
 func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
-	// Dirty fix for now. If testing then go test is invoked in the ./src
-	// directory and we should look in the parents parent directory for APIKEYS.txt
 	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
 		return []string{os.Getenv("APIKEY"), os.Getenv("APIKEY1")}, nil
 	}
@@ -278,10 +300,12 @@ func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
 	if empty := AllElementsEmpty(apiKeys); empty {
 		return nil, errors.New("APIKEYS.txt exists but has no API key(s)")
 	}
-	return apiKeys, nil
 
+	return apiKeys, nil
 }
 
+// ExtractSteamIDs returns valid API keys from a specified list and
+// returns an error if none are found
 func ExtractSteamIDs(args []string) ([]string, error) {
 	validSteamIDs := []string{}
 	for _, arg := range args {
@@ -296,12 +320,8 @@ func ExtractSteamIDs(args []string) ([]string, error) {
 	return validSteamIDs, nil
 }
 
-func SetBaseWorkingDirectory() {
-	path, err := os.Getwd()
-	CheckErr(err)
-	os.Setenv("BWD", path)
-}
-
+// GetAndRead executes a HTTP GET request and returns the body
+// of the response in []byte format
 func GetAndRead(URL string) ([]byte, error) {
 	res, err := http.Get(URL)
 	if err != nil {
@@ -313,14 +333,18 @@ func GetAndRead(URL string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
+
 	return body, nil
 }
 
+// AllElementsEmpty determines if all elements in a specified
+// list are empty
 func AllElementsEmpty(list []string) bool {
 	for _, elem := range list {
 		if elem != "" {
 			return false
 		}
 	}
+
 	return true
 }
