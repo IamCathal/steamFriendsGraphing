@@ -10,10 +10,11 @@ import (
 )
 
 type Info struct {
-	CacheFolderLocation string
-	LogsFolderLocation  string
-	ApiKeysFileLocation string
-	UrlMappingsLocation string
+	CacheFolderLocation    string
+	LogsFolderLocation     string
+	ApiKeysFileLocation    string
+	UrlMappingsLocation    string
+	FinishedGraphsLocation string
 }
 
 func InitConfig(mode string) Info {
@@ -23,6 +24,7 @@ func InitConfig(mode string) Info {
 	logsFolderLocation := ""
 	apiKeysFileLocation := ""
 	urlMappingsLocation := ""
+	finishedGraphsLocation := ""
 
 	path, err := os.Getwd()
 	CheckErr(err)
@@ -39,12 +41,14 @@ func InitConfig(mode string) Info {
 
 	apiKeysFileLocation = filepath.Join(baseFolder, "APIKEYS.txt")
 	urlMappingsLocation = filepath.Join(baseFolder, "config/urlMappings.txt")
+	finishedGraphsLocation = filepath.Join(baseFolder, "finishedGraphs")
 
 	return Info{
-		CacheFolderLocation: cacheFolderLocation,
-		LogsFolderLocation:  logsFolderLocation,
-		ApiKeysFileLocation: apiKeysFileLocation,
-		UrlMappingsLocation: urlMappingsLocation,
+		CacheFolderLocation:    cacheFolderLocation,
+		LogsFolderLocation:     logsFolderLocation,
+		ApiKeysFileLocation:    apiKeysFileLocation,
+		UrlMappingsLocation:    urlMappingsLocation,
+		FinishedGraphsLocation: finishedGraphsLocation,
 	}
 }
 

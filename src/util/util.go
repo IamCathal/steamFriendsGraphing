@@ -20,13 +20,13 @@ var (
 	Red   = "\033[31m"
 	White = "\033[0;37m"
 
-	config configuration.Info
+	appConfig configuration.Info
 )
 
 // SetConfig sets the global config used by various functions
 // to manage cache and logging folder file locations
-func SetConfig(appConfig configuration.Info) {
-	config = appConfig
+func SetConfig(config configuration.Info) {
+	appConfig = config
 }
 
 // GetPlayerSummary gets a player summary through the Steam web API
@@ -67,7 +67,7 @@ func GetUserDetails(cntr ControllerInterface, apiKey, steamID string) (Player, e
 // CreateUserDataFolder creates a folder for holding cache.
 // Can either be userData for regular use or testData when running under github actions.
 func CreateUserDataFolder() error {
-	cacheFolder := config.CacheFolderLocation
+	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
 		ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
@@ -154,7 +154,7 @@ func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
 	}
 
 	// APIKEYS.txt MUST be in the root directory of the project
-	APIKeysLocation := config.ApiKeysFileLocation
+	APIKeysLocation := appConfig.ApiKeysFileLocation
 	apiKeys := make([]string, 0)
 
 	file, err := cntr.Open(APIKeysLocation)
@@ -187,7 +187,7 @@ func ExtractSteamIDs(args []string) ([]string, error) {
 		}
 	}
 	if len(validSteamIDs) == 0 {
-		return validSteamIDs, fmt.Errorf("No valid steamIDs given")
+		return validSteamIDs, errors.New("no valid steamIDs given")
 	}
 
 	return validSteamIDs, nil
@@ -220,4 +220,12 @@ func AllElementsEmpty(list []string) bool {
 	}
 
 	return true
+}
+
+// IfKeyNotInMap does what it says on the tin
+func IfKeyNotInMap(key string, inputMap map[string]string) bool {
+	if _, exists := inputMap[key]; exists {
+		return true
+	}
+	return false
 }

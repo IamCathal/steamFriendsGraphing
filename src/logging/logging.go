@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	config configuration.Info
+	appConfig configuration.Info
 )
 
-func SetConfig(appConfig configuration.Info) {
-	config = appConfig
+func SetConfig(config configuration.Info) {
+	appConfig = config
 }
 
 // CheckErr is a simple function to replace dozen or so if err != nil statements
@@ -32,7 +32,7 @@ func CheckErr(err error) {
 }
 
 func SpecialLog(cntr util.ControllerInterface, msg string) {
-	logsFolder := config.LogsFolderLocation
+	logsFolder := appConfig.LogsFolderLocation
 	if logsFolder == "" {
 		util.ThrowErr(errors.New("config.LogsFolderLocation was not initialised before attempting to write to file"))
 	}

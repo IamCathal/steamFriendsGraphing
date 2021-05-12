@@ -55,11 +55,11 @@ type CrawlerConfig struct {
 }
 
 var (
-	config configuration.Info
+	appConfig configuration.Info
 )
 
-func SetConfig(appConfig configuration.Info) {
-	config = appConfig
+func SetConfig(config configuration.Info) {
+	appConfig = config
 }
 
 // InitWorkerConfig initialises the worker based on the level and worker amount given
@@ -370,7 +370,7 @@ func LogCall(cntr util.ControllerInterface, method, steamID, username, status, s
 
 // WriteToFile writes a user's friendlist to a file for later processing
 func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends util.FriendsStruct) {
-	cacheFolder := config.CacheFolderLocation
+	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
 		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
@@ -390,7 +390,7 @@ func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends 
 // GetCache gets a user's cached records if it exists
 func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct, error) {
 	var temp util.FriendsStruct
-	cacheFolder := config.CacheFolderLocation
+	cacheFolder := appConfig.CacheFolderLocation
 
 	if exists := CacheFileExists(cntr, steamID); exists {
 		file, err := cntr.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
@@ -419,7 +419,7 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 // e.g 76561198063271448 -> moose
 func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (string, error) {
 	var temp util.FriendsStruct
-	cacheFolder := config.CacheFolderLocation
+	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
 		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
@@ -458,7 +458,7 @@ func IsEnvVarSet(envvar string) bool {
 
 // CacheFileExists checks whether a given cached file exists
 func CacheFileExists(cntr util.ControllerInterface, steamID string) bool {
-	cacheFolder := config.CacheFolderLocation
+	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
 		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
@@ -467,7 +467,7 @@ func CacheFileExists(cntr util.ControllerInterface, steamID string) bool {
 }
 
 func LoadMappings() map[string]string {
-	urlMapLocation := config.UrlMappingsLocation
+	urlMapLocation := appConfig.UrlMappingsLocation
 	if urlMapLocation == "" {
 		util.ThrowErr(errors.New("config.UrlMappingsLocation was not initialised before attempting to load url mappings"))
 	}
@@ -496,7 +496,7 @@ func LoadMappings() map[string]string {
 }
 
 func writeMappings(urlMap map[string]string) {
-	urlMapLocation := config.UrlMappingsLocation
+	urlMapLocation := appConfig.UrlMappingsLocation
 	if urlMapLocation == "" {
 		util.ThrowErr(errors.New("config.UrlMappingsLocation was not initialised before attempting to write url mappings"))
 	}

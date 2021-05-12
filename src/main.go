@@ -7,9 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-echarts/go-echarts/charts"
 	"github.com/steamFriendsGraphing/configuration"
-	"github.com/steamFriendsGraphing/graphing"
 	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/server"
 	"github.com/steamFriendsGraphing/util"
@@ -25,19 +23,20 @@ func main() {
 	flag.Parse()
 
 	cntr := util.Controller{}
-
 	appConfig := configuration.InitConfig("normal")
-
 	util.SetConfig(appConfig)
 	worker.SetConfig(appConfig)
 	logging.SetConfig(appConfig)
 
 	if *httpserver {
+		server.SetController(cntr)
 		server.RunServer("8080")
 		return
 	}
+
 	apiKeys, err := util.GetAPIKeys(cntr)
 	util.CheckErr(err)
+
 	steamIDs, err := util.ExtractSteamIDs(os.Args)
 	if err != nil {
 		log.Fatal(err)
@@ -71,70 +70,12 @@ func main() {
 		}
 		return
 	}
-	if len(steamIDs) == 1 {
-		os.Setenv("CURRTARGET", steamIDs[0])
-		worker.InitCrawling(cntr, config, steamIDs[0])
-		worker.GenerateURL(steamIDs[0], urlMap)
-		gData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
-		gData.Render(fmt.Sprintf("%s/../finishedGraphs/%s", os.Getenv("BWD"), urlMap[steamIDs[0]]))
-		return
+
+	switch len(steamIDs) {
+	case 1:
+		worker.CrawlOneUser(steamIDs[0], urlMap, cntr, config)
+	case 2:
+		worker.CrawlTwoUsers(steamIDs[0], steamIDs[1], urlMap, cntr, config)
 	}
 
-	if len(steamIDs) == 2 {
-		identifier := fmt.Sprintf("%s%s", steamIDs[0], steamIDs[1])
-		worker.GenerateURL(fmt.Sprintf("%s%s", steamIDs[0], steamIDs[1]), urlMap)
-
-		os.Setenv("CURRTARGET", steamIDs[0])
-		worker.InitCrawling(cntr, config, steamIDs[0])
-		os.Setenv("CURRTARGET", steamIDs[1])
-		worker.InitCrawling(cntr, config, steamIDs[1])
-
-		StartUserGraphData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[0])
-		EndUserGraphData := graphing.InitGraphing(config.Level, config.Workers, steamIDs[1])
-
-		graph := charts.NewGraph()
-		allNodes := graphing.MergeNodes(StartUserGraphData.Nodes, EndUserGraphData.Nodes)
-
-		allDijkstraGraph, allUsersMap := graphing.MergeDijkstraGraphs(StartUserGraphData.DijkstraGraph, EndUserGraphData.DijkstraGraph, StartUserGraphData.UsersMap, EndUserGraphData.UsersMap)
-
-		graphData := &graphing.GraphData{
-			Nodes:        allNodes,
-			Links:        append(StartUserGraphData.Links, EndUserGraphData.Links...),
-			EchartsGraph: graph,
-
-			ApplyDijkstra: true,
-			UsersMap:      allUsersMap,
-			DijkstraGraph: allDijkstraGraph,
-		}
-		newNodes := make([]charts.GraphNode, 0)
-		bestPath, exists := graphData.GetDijkstraPath(steamIDs[0], steamIDs[1])
-		if exists {
-			fmt.Println("The route:")
-			for _, username := range bestPath {
-				fmt.Printf("%s -> ", username)
-			}
-			fmt.Printf("\n")
-			foundNode := false
-			if len(bestPath) != 0 {
-				for _, username := range graphData.Nodes {
-					for _, pathUsername := range bestPath {
-						if username.Name == pathUsername {
-							specColor := charts.ItemStyleOpts{Color: "#38413A"}
-							newNodes = append(newNodes, charts.GraphNode{Name: pathUsername, ItemStyle: specColor})
-							foundNode = true
-							break
-						}
-					}
-					if !foundNode {
-						newNodes = append(newNodes, charts.GraphNode{Name: username.Name})
-					}
-					foundNode = false
-				}
-			}
-		}
-
-		graphData.Nodes = newNodes
-		graphData.Render(urlMap[identifier])
-		return
-	}
 }

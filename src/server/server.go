@@ -97,7 +97,6 @@ func status(w http.ResponseWriter, req *http.Request) {
 
 func RunServer(port string) {
 	startTime = time.Now()
-	SetController(util.Controller{})
 
 	mwBlackList := make(map[string]bool)
 	mwBlackList["/"] = true
