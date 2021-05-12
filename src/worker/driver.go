@@ -10,7 +10,7 @@ import (
 )
 
 func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.ControllerInterface, config CrawlerConfig) {
-	finishedGraphLocation := fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamID])
+	finishedGraphLocation := ""
 	os.Setenv("CURRTARGET", steamID)
 
 	if userHasBeenGraphedBefore := util.IfKeyNotInMap(steamID, urlMapping); !userHasBeenGraphedBefore {
@@ -18,9 +18,12 @@ func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.Contro
 
 		InitCrawling(cntr, config, steamID)
 		gData := graphing.InitGraphing(config.Level, config.Workers, steamID)
+
+		finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamID])
 		gData.Render(finishedGraphLocation)
 	}
 
+	finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamID])
 	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
 }
 
