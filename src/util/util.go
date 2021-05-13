@@ -91,7 +91,9 @@ func CheckErr(err error) {
 
 // ThrowErr throws an error explicitly
 func ThrowErr(err error) {
-	CheckErr(err)
+	_, file, line, _ := runtime.Caller(1)
+	path, _ := os.Getwd()
+	log.Fatal(fmt.Sprintf("%s:%d ", strings.TrimPrefix(file, path), line), err)
 }
 
 // IsValidFormatSteamID runs a simple regex check to see if the
