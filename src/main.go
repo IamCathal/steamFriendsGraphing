@@ -71,6 +71,12 @@ func main() {
 		return
 	}
 
+	// If two steamIDs are given and they are the same, treat this as a
+	// single user search
+	if len(steamIDs) == 2 && steamIDs[0] == steamIDs[1] {
+		steamIDs = []string{steamIDs[0]}
+	}
+
 	switch len(steamIDs) {
 	case 1:
 		worker.CrawlOneUser(steamIDs[0], urlMap, cntr, config)

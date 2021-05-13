@@ -6,18 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/segmentio/ksuid"
 	"github.com/steamFriendsGraphing/configuration"
 	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/util"
@@ -447,15 +444,6 @@ func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (st
 	return "", fmt.Errorf("Cache file %s.gz does not exist", steamID)
 }
 
-// IsEnvVarSet does a simple check to see if an environment
-// variable is set
-func IsEnvVarSet(envvar string) bool {
-	if _, exists := os.LookupEnv(envvar); exists {
-		return true
-	}
-	return false
-}
-
 // CacheFileExists checks whether a given cached file exists
 func CacheFileExists(cntr util.ControllerInterface, steamID string) bool {
 	cacheFolder := appConfig.CacheFolderLocation
@@ -464,58 +452,4 @@ func CacheFileExists(cntr util.ControllerInterface, steamID string) bool {
 	}
 
 	return cntr.FileExists(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
-}
-
-func LoadMappings() map[string]string {
-	urlMapLocation := appConfig.UrlMappingsLocation
-	if urlMapLocation == "" {
-		util.ThrowErr(errors.New("config.UrlMappingsLocation was not initialised before attempting to load url mappings"))
-	}
-	urlMap := make(map[string]string)
-	byteContent, err := ioutil.ReadFile(urlMapLocation)
-	if err != nil {
-		log.Fatal(err)
-	}
-	stringContent := string(byteContent)
-
-	if len(stringContent) > 0 {
-		lines := strings.Split(stringContent, "\n")
-
-		for _, line := range lines {
-			splitArr := strings.Split(line, ":")
-			// Last line is just \n
-			if len(splitArr) == 2 {
-				urlMap[splitArr[0]] = splitArr[1]
-			}
-		}
-		return urlMap
-
-	} else {
-		return make(map[string]string)
-	}
-}
-
-func writeMappings(urlMap map[string]string) {
-	urlMapLocation := appConfig.UrlMappingsLocation
-	if urlMapLocation == "" {
-		util.ThrowErr(errors.New("config.UrlMappingsLocation was not initialised before attempting to write url mappings"))
-	}
-	file, err := os.OpenFile(urlMapLocation, os.O_RDWR, 0755)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	file.Seek(0, 0)
-	for key, _ := range urlMap {
-		_, err = file.WriteString(fmt.Sprintf("%s:%s\n", key, urlMap[key]))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-}
-
-func GenerateURL(input string, urlMap map[string]string) {
-	identifier := ksuid.New()
-	urlMap[input] = identifier.String()
-	writeMappings(urlMap)
 }

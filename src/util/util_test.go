@@ -291,3 +291,7 @@ func TestGetAPIKeysWithNonExistantAPIKeysFile(t *testing.T) {
 	assert.Empty(t, apiKeys)
 	assert.Equal(t, expectedErr.Error(), err.Error())
 }
+
+func TestGivenOneSteamIDForSortingOneSteamIsReturned(t *testing.T) {
+
+}

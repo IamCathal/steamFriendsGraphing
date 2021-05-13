@@ -223,7 +223,7 @@ func AllElementsEmpty(list []string) bool {
 }
 
 // IfKeyNotInMap does what it says on the tin
-func IfKeyNotInMap(key string, inputMap map[string]string) bool {
+func IsKeyInMap(key string, inputMap map[string]string) bool {
 	if _, exists := inputMap[key]; exists {
 		return true
 	}
