@@ -157,7 +157,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 
 	// If the cache exists and the env var to disable serving from cache is not set
 	if exists := CacheFileExists(cntr, steamID); exists {
-		if exists := IsEnvVarSet("disablereadcache"); !exists {
+		if readCacheDisabled := IsEnvVarSet("disablereadcache"); !readCacheDisabled {
 			friendsObj, err := GetCache(cntr, steamID)
 			if err != nil {
 				return friendsObj, err
@@ -265,7 +265,6 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 	util.CheckErr(err)
 	friendsObj.Username = username
 	WriteToFile(cntr, apiKey, steamID, friendsObj)
-
 	// log the request along the round trip delay
 	LogCall(cntr, fmt.Sprintf("GET [%d][%d]", level, len(jobs)), steamID, friendsObj.Username, "200", util.Green, startTime)
 	return friendsObj, nil
@@ -375,12 +374,17 @@ func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends 
 	if existing := CacheFileExists(cntr, steamID); !existing {
 		file, err := cntr.CreateFile(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		util.CheckErr(err)
-		defer file.Close()
 
 		jsonObj, err := json.Marshal(friends)
 		util.CheckErr(err)
 
-		cntr.WriteGzip(file, string(jsonObj))
+		err = cntr.WriteGzip(file, string(jsonObj))
+		util.CheckErr(err)
+
+		err = file.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -391,25 +395,35 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 
 	if exists := CacheFileExists(cntr, steamID); exists {
 		file, err := cntr.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
-		defer file.Close()
 		if err != nil {
-			log.Fatal(err)
+			return temp, err
 		}
-
-		gz, _ := gzip.NewReader(file)
-		defer gz.Close()
-
+		gz, err := gzip.NewReader(file)
+		if err != nil {
+			return temp, err
+		}
 		scanner := bufio.NewScanner(gz)
 		res := ""
 		for scanner.Scan() {
 			res += scanner.Text()
 		}
+		err = json.Unmarshal([]byte(res), &temp)
+		if err != nil {
+			return temp, err
+		}
+		err = file.Close()
+		if err != nil {
+			return temp, err
+		}
+		err = gz.Close()
+		if err != nil {
+			return temp, err
+		}
 
-		_ = json.Unmarshal([]byte(res), &temp)
 		return temp, nil
 	}
 
-	return temp, fmt.Errorf("Cache file %s.gz does not exist", steamID)
+	return temp, fmt.Errorf("cache file %s.gz does not exist", steamID)
 }
 
 // GetUsernameFromCacheFile gets the username for a given cache file
@@ -423,25 +437,35 @@ func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (st
 
 	if exists := CacheFileExists(cntr, steamID); exists {
 		file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
-		defer file.Close()
 		if err != nil {
 			return "", err
 		}
-
-		gz, _ := gzip.NewReader(file)
-		defer gz.Close()
-
+		gz, err := gzip.NewReader(file)
+		if err != nil {
+			return "", err
+		}
 		scanner := bufio.NewScanner(gz)
 		res := ""
 		for scanner.Scan() {
 			res += scanner.Text()
 		}
+		err = json.Unmarshal([]byte(res), &temp)
+		if err != nil {
+			return "", err
+		}
+		err = file.Close()
+		if err != nil {
+			return "", err
+		}
+		err = gz.Close()
+		if err != nil {
+			return "", err
+		}
 
-		_ = json.Unmarshal([]byte(res), &temp)
 		return temp.Username, nil
 	}
 
-	return "", fmt.Errorf("Cache file %s.gz does not exist", steamID)
+	return "", fmt.Errorf("cache file %s.gz does not exist", steamID)
 }
 
 // CacheFileExists checks whether a given cached file exists

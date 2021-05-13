@@ -5,6 +5,8 @@ package worker
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"testing"
@@ -152,8 +154,13 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 
 	os.Setenv("CURRTARGET", testCase.steamID)
 
-	fakeCacheFile := os.File{}
-	mockController.On("CreateFile", mock.AnythingOfType("string")).Return(&fakeCacheFile, nil)
+	// A real file pointer must be used. Creating a nil pointer os.File
+	// results in an ErrInvalid when closed
+	dummyFile, err := ioutil.TempFile("", "tempAPIKeys.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	mockController.On("CreateFile", mock.AnythingOfType("string")).Return(dummyFile, nil)
 	mockController.On("WriteGzip", mock.AnythingOfType("*os.File"), mock.AnythingOfType("string")).Return(nil)
 
 	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, testCase.steamID)
