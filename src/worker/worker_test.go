@@ -259,12 +259,12 @@ func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
 
 	os.Setenv("CURRTARGET", testCase.steamID)
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
-	expectedError := errors.New(fmt.Sprintf("invalid steamID %s, apikey %s\n", testCase.steamID, testCase.apikey))
+	expectedError := errors.New(fmt.Sprintf("invalid steamID: %s, apikey: %s", testCase.steamID, testCase.apikey))
 
 	friends, err := GetFriends(mockController, testCase.steamID, testCase.apikey, 1, jobs)
 
 	assert.Empty(t, friends)
-	assert.EqualError(t, err, expectedError.Error())
+	assert.Contains(t, err.Error(), expectedError.Error())
 
 	os.RemoveAll(appConfig.LogsFolderLocation)
 }
