@@ -33,10 +33,11 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 	if err != nil {
 		log.Fatal(err)
 	}
-	finishedGraphLocation := fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
+	finishedGraphLocation := ""
 
 	if usersHaveBeenGraphedBefore := util.IsKeyInMap(steamIDsIdentifier, urlMapping); !usersHaveBeenGraphedBefore {
 		GenerateURL(steamIDsIdentifier, urlMapping)
+		finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
 
 		os.Setenv("CURRTARGET", steamID1)
 		InitCrawling(cntr, config, steamID1)
@@ -95,5 +96,6 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 		graphData.Render(finishedGraphLocation)
 	}
 
+	finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
 	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
 }

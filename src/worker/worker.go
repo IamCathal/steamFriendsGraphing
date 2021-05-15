@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
 	"net/url"
@@ -171,7 +172,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 	if valid := util.IsValidFormatSteamID(steamID); !valid {
 		LogCall(cntr, "GET", steamID, "Invalid SteamID", "400", util.Red, startTime)
 		var temp util.FriendsStruct
-		return temp, fmt.Errorf("invalid steamID %s, apikey %s\n", steamID, apiKey)
+		return temp, util.MakeErr(fmt.Errorf("invalid steamID: %s, apikey: %s", steamID, apiKey))
 	}
 	friendsObj, err := cntr.CallGetFriendsListAPI(url.QueryEscape(steamID), url.QueryEscape(apiKey))
 	if err != nil {
@@ -200,7 +201,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 		userStatsObj, err := cntr.CallPlayerSummaryAPI(steamIDsList, apiKey)
 		if err != nil {
 			var temp util.FriendsStruct
-			return temp, err
+			return temp, util.MakeErr(err)
 		}
 
 		// Order of received friends is random,
@@ -236,7 +237,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 			userStatsObj, err := cntr.CallPlayerSummaryAPI(steamIDsList, apiKey)
 			if err != nil {
 				var temp util.FriendsStruct
-				return temp, err
+				return temp, util.MakeErr(err)
 			}
 
 			// Order of received friends is random,
@@ -262,7 +263,9 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 	}
 
 	username, err := util.GetUsername(cntr, apiKey, steamID)
-	util.CheckErr(err)
+	if err != nil {
+		return friendsObj, util.MakeErr(err)
+	}
 	friendsObj.Username = username
 	WriteToFile(cntr, apiKey, steamID, friendsObj)
 	// log the request along the round trip delay
@@ -396,34 +399,39 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 	if exists := CacheFileExists(cntr, steamID); exists {
 		file, err := cntr.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		if err != nil {
-			return temp, err
+			return temp, util.MakeErr(err)
 		}
 		gz, err := gzip.NewReader(file)
 		if err != nil {
-			return temp, err
+			return temp, util.MakeErr(err)
 		}
-		scanner := bufio.NewScanner(gz)
-		res := ""
-		for scanner.Scan() {
-			res += scanner.Text()
-		}
-		err = json.Unmarshal([]byte(res), &temp)
+		// scanner := bufio.NewScanner(gz)
+		// res := ""
+		// for scanner.Scan() {
+		// 	res += scanner.Text()
+		// }
+		s, err := ioutil.ReadAll(gz)
 		if err != nil {
-			return temp, err
+			return temp, util.MakeErr(err)
+		}
+
+		err = json.Unmarshal([]byte(s), &temp)
+		if err != nil {
+			return temp, util.MakeErr(err)
 		}
 		err = file.Close()
 		if err != nil {
-			return temp, err
+			return temp, util.MakeErr(err)
 		}
 		err = gz.Close()
 		if err != nil {
-			return temp, err
+			return temp, util.MakeErr(err)
 		}
 
 		return temp, nil
 	}
 
-	return temp, fmt.Errorf("cache file %s.gz does not exist", steamID)
+	return temp, util.MakeErr(fmt.Errorf("cache file %s.gz does not exist", steamID))
 }
 
 // GetUsernameFromCacheFile gets the username for a given cache file
@@ -438,11 +446,11 @@ func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (st
 	if exists := CacheFileExists(cntr, steamID); exists {
 		file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		if err != nil {
-			return "", err
+			return "", util.MakeErr(err)
 		}
 		gz, err := gzip.NewReader(file)
 		if err != nil {
-			return "", err
+			return "", util.MakeErr(err)
 		}
 		scanner := bufio.NewScanner(gz)
 		res := ""
@@ -451,21 +459,21 @@ func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (st
 		}
 		err = json.Unmarshal([]byte(res), &temp)
 		if err != nil {
-			return "", err
+			return "", util.MakeErr(err)
 		}
 		err = file.Close()
 		if err != nil {
-			return "", err
+			return "", util.MakeErr(err)
 		}
 		err = gz.Close()
 		if err != nil {
-			return "", err
+			return "", util.MakeErr(err)
 		}
 
 		return temp.Username, nil
 	}
 
-	return "", fmt.Errorf("cache file %s.gz does not exist", steamID)
+	return "", util.MakeErr(fmt.Errorf("cache file %s.gz does not exist", steamID))
 }
 
 // CacheFileExists checks whether a given cached file exists

@@ -3,7 +3,6 @@ package util
 import (
 	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -35,7 +34,7 @@ func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStat
 		apiKey, steamID)
 	res, err := GetAndRead(targetURL)
 	if err != nil {
-		return userStatsObj, err
+		return userStatsObj, MakeErr(err)
 	}
 
 	json.Unmarshal(res, &userStatsObj)
@@ -64,21 +63,21 @@ func (controller Controller) CallGetFriendsListAPI(steamID, apiKey string) (Frie
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", url.QueryEscape(apiKey), url.QueryEscape(steamID))
 	res, err := http.Get(targetURL)
 	if err != nil {
-		return friendsObj, err
+		return friendsObj, MakeErr(err)
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
-		return friendsObj, err
+		return friendsObj, MakeErr(err)
 	}
 
 	if valid := IsValidAPIResponseForSteamId(string(body)); !valid {
-		return friendsObj, fmt.Errorf("invalid steamID %s given", steamID)
+		return friendsObj, MakeErr(fmt.Errorf("invalid steamID %s given", steamID))
 	}
 
 	if valid := IsValidResponseForAPIKey(string(body)); !valid {
-		return friendsObj, fmt.Errorf("invalid api key: %s", apiKey)
+		return friendsObj, MakeErr(fmt.Errorf("invalid api key: %s", apiKey))
 	}
 
 	json.Unmarshal(body, &friendsObj)
@@ -101,8 +100,7 @@ func (control Controller) FileExists(fileName string) bool {
 func (controller Controller) Open(fileName string) (*os.File, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
-		errorMsg := fmt.Sprintf("failed to open %s", fileName)
-		return nil, errors.New(errorMsg)
+		return nil, MakeErr(fmt.Errorf("failed to open %s", fileName))
 	}
 
 	return file, nil
@@ -113,7 +111,7 @@ func (controller Controller) Open(fileName string) (*os.File, error) {
 func (controller Controller) OpenFile(fileName string, flag int, perm os.FileMode) (*os.File, error) {
 	file, err := os.OpenFile(fileName, flag, perm)
 	if err != nil {
-		return nil, err
+		return nil, MakeErr(err)
 	}
 
 	return file, nil
@@ -123,7 +121,7 @@ func (controller Controller) OpenFile(fileName string, flag int, perm os.FileMod
 // the function invoking CreateFile
 func (controller Controller) CreateFile(fileName string) (*os.File, error) {
 	file, err := os.Create(fileName)
-	return file, err
+	return file, MakeErr(err)
 }
 
 // WriteGzip gzips a given file
@@ -132,5 +130,6 @@ func (controller Controller) WriteGzip(file *os.File, content string) error {
 	_, err := w.Write([]byte(content))
 	defer w.Close()
 
+	fmt.Println("controllerIntercace.WriteGzip: Error writing gzip")
 	return err
 }

@@ -96,6 +96,12 @@ func ThrowErr(err error) {
 	log.Fatal(fmt.Sprintf("%s:%d ", strings.TrimPrefix(file, path), line), err)
 }
 
+func MakeErr(err error, msg ...string) error {
+	_, file, line, _ := runtime.Caller(1)
+	path, _ := os.Getwd()
+	return fmt.Errorf("%s:%d %s %s", strings.TrimPrefix(file, path), line, msg, err)
+}
+
 // IsValidFormatSteamID runs a simple regex check to see if the
 // steamID is in the valid format before calling the API
 func IsValidFormatSteamID(steamID string) bool {
