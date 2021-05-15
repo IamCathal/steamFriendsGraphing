@@ -121,7 +121,10 @@ func (controller Controller) OpenFile(fileName string, flag int, perm os.FileMod
 // the function invoking CreateFile
 func (controller Controller) CreateFile(fileName string) (*os.File, error) {
 	file, err := os.Create(fileName)
-	return file, MakeErr(err)
+	if err != nil {
+		return file, MakeErr(err)
+	}
+	return file, nil
 }
 
 // WriteGzip gzips a given file
