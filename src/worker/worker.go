@@ -376,13 +376,18 @@ func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends 
 
 	if existing := CacheFileExists(cntr, steamID); !existing {
 		file, err := cntr.CreateFile(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
-		util.CheckErr(err)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		jsonObj, err := json.Marshal(friends)
-		util.CheckErr(err)
-
+		if err != nil {
+			log.Fatal(err)
+		}
 		err = cntr.WriteGzip(file, string(jsonObj))
-		util.CheckErr(err)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		err = file.Close()
 		if err != nil {

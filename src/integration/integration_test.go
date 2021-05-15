@@ -77,7 +77,6 @@ func TestGetUsernameFromCacheFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
 	usernameOfTargetUser, err := worker.GetUsernameFromCacheFile(cntr, targetSteamID)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedUsername, usernameOfTargetUser)
