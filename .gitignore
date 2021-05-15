@@ -17,7 +17,9 @@ src/steamFriendsGraphing
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+.vscode
 
+# Files for internal use
 APIKEYS.txt
 .env
 *.txt
