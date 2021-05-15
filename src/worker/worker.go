@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
-	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -17,15 +16,21 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/steamFriendsGraphing/configuration"
+	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/util"
 )
 
+// JobsStruct is the strcuture used for placing jobs onto the
+// worker queue
 type JobsStruct struct {
 	Level   int
 	SteamID string
 	APIKey  string
 }
 
+// WorkerConfig holds most of the configuration needed
+// to start the worker (apart from jobs and result channels)
 type WorkerConfig struct {
 	JobsMutex       *sync.Mutex
 	ResMutex        *sync.Mutex
@@ -37,17 +42,27 @@ type WorkerConfig struct {
 	WorkerAmount    int
 }
 
+// CrawlerConfig holdes all of the configuration needed to
+// start the crawler
 type CrawlerConfig struct {
 	Level    int
 	StatMode bool
 	TestKeys bool
 	Workers  int
-	SteamID  string
 	APIKeys  []string
 }
 
-func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
+var (
+	appConfig configuration.Info
+)
 
+func SetConfig(config configuration.Info) {
+	appConfig = config
+}
+
+// InitWorkerConfig initialises the worker based on the level and worker amount given
+// and returns a WorkerConfig with all fields set
+func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
 	if levelCap < 1 || levelCap > 4 {
 		temp := &WorkerConfig{}
 		return temp, fmt.Errorf("invalid level %d given. levelCap must be in range 1-4 (inclusive)", levelCap)
@@ -71,39 +86,32 @@ func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
 		LevelCap:        levelCap,
 		WorkerAmount:    workerAmount,
 	}
-	fmt.Printf("======================================\n")
-	fmt.Printf("       Crawler configuration\n")
-	fmt.Printf("Level:\t\t%d\n", levelCap)
-	fmt.Printf("Worker amount:\t%d\n", workerAmount)
-	if levelCap <= 2 {
-		fmt.Printf("Channel len:\t700\n")
-	} else {
-		fmt.Printf("Channel len:\t%d\n", int(math.Pow(90, float64(levelCap))))
-	}
-	fmt.Printf("======================================\n")
+	// fmt.Printf("======================================\n")
+	// fmt.Printf("       Crawler configuration\n")
+	// fmt.Printf("Level:\t\t%d\n", levelCap)
+	// fmt.Printf("Worker amount:\t%d\n", workerAmount)
+	// if levelCap <= 2 {
+	// 	fmt.Printf("Channel len:\t700\n")
+	// } else {
+	// 	fmt.Printf("Channel len:\t%d\n", int(math.Pow(90, float64(levelCap))))
+	// }
+	// fmt.Printf("======================================\n")
 	return workConfig, nil
 }
 
-func InitCrawling(cfg CrawlerConfig) {
-	if cfg.TestKeys == true {
-		util.CheckAPIKeys(cfg.APIKeys)
-		return
+// InitCrawling initialises the crawling and then starts up the graph crawler
+// that produces the HTML output
+func InitCrawling(cntr util.ControllerInterface, cfg CrawlerConfig, steamID string) {
+	if cfg.TestKeys {
+		util.CheckAPIKeys(cntr, cfg.APIKeys)
 	}
 
-	if cfg.StatMode {
-		resMap, err := util.GetUserDetails(cfg.APIKeys[0], cfg.SteamID)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for k, v := range resMap {
-			fmt.Printf("%13s: %s\n", k, v)
-		}
-		return
-	}
-	ControlFunc(cfg.APIKeys, cfg.SteamID, cfg.Level, cfg.Workers)
+	ControlFunc(cntr, cfg.APIKeys, steamID, cfg.Level, cfg.Workers)
 }
 
-func Worker(jobs <-chan JobsStruct, results chan<- JobsStruct, cfg *WorkerConfig, activeJobs *int64) {
+// Worker is the crawling worker queue implementation. It takes in users off the jobs queue, processes
+//  them and places and then places user's friends onto the results queue
+func Worker(cntr util.ControllerInterface, jobs <-chan JobsStruct, results chan<- JobsStruct, cfg *WorkerConfig, activeJobs *int64) {
 	for {
 		cfg.JobsMutex.Lock()
 		job := <-jobs
@@ -111,7 +119,7 @@ func Worker(jobs <-chan JobsStruct, results chan<- JobsStruct, cfg *WorkerConfig
 
 		// Temporary fix, sometimes level 0s get put onto jobs queue
 		if job.Level != 0 {
-			friendsObj, err := GetFriends(job.SteamID, job.APIKey, cfg.LevelCap, jobs)
+			friendsObj, err := GetFriends(cntr, job.SteamID, job.APIKey, cfg.LevelCap, jobs)
 			util.CheckErr(err)
 
 			numFriends := len(friendsObj.FriendsList.Friends)
@@ -145,48 +153,32 @@ func Worker(jobs <-chan JobsStruct, results chan<- JobsStruct, cfg *WorkerConfig
 }
 
 // GetFriends returns the list of friends for a given user and caches results if requested
-func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util.FriendsStruct, error) {
+func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int, jobs <-chan JobsStruct) (util.FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 
 	// If the cache exists and the env var to disable serving from cache is not set
-	if exists := CacheFileExist(steamID); exists {
-		if exists := IsEnvVarSet("disablereadcache"); !exists {
-			friendsObj, err := GetCache(steamID)
+	if exists := CacheFileExists(cntr, steamID); exists {
+		if readCacheDisabled := IsEnvVarSet("disablereadcache"); !readCacheDisabled {
+			friendsObj, err := GetCache(cntr, steamID)
 			if err != nil {
 				return friendsObj, err
 			}
-			LogCall("GET", steamID, friendsObj.Username, "200", util.Green, startTime)
+			LogCall(cntr, "GET", steamID, friendsObj.Username, "200", util.Green, startTime)
 			return friendsObj, nil
 		}
 	}
 
 	// Check to see if the steamID is in the valid format now to save time
 	if valid := util.IsValidFormatSteamID(steamID); !valid {
-		LogCall("GET", steamID, "Invalid SteamID", "400", util.Red, startTime)
+		LogCall(cntr, "GET", steamID, "Invalid SteamID", "400", util.Red, startTime)
 		var temp util.FriendsStruct
-		return temp, fmt.Errorf("invalid steamID %s, apikey %s\n", steamID, apiKey)
+		return temp, util.MakeErr(fmt.Errorf("invalid steamID: %s, apikey: %s", steamID, apiKey))
 	}
-	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=%s&relationship=friend", url.QueryEscape(apiKey), url.QueryEscape(steamID))
-	res, err := http.Get(targetURL)
-	util.CheckErr(err)
-	body, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	util.CheckErr(err)
-
-	var friendsObj util.FriendsStruct
-	json.Unmarshal(body, &friendsObj)
-
-	// If the HTTP response has error messages in it handle them accordingly
-	if valid := util.IsValidSteamID(string(body)); !valid {
-		LogCall("GET", steamID, friendsObj.Username, "400", util.Red, startTime)
+	friendsObj, err := cntr.CallGetFriendsListAPI(url.QueryEscape(steamID), url.QueryEscape(apiKey))
+	if err != nil {
 		var temp util.FriendsStruct
-		return temp, errors.New("Invalid steamID given")
-	}
-
-	if valid := util.IsValidAPIKey(string(body)); !valid {
-		LogCall("GET", steamID, "Invalid API key", "403", util.Red, startTime)
-		var temp util.FriendsStruct
-		return temp, fmt.Errorf("invalid api key: %s", apiKey)
+		LogCall(cntr, "GET", steamID, friendsObj.Username, "400", util.Red, startTime)
+		return temp, err
 	}
 
 	// Gathers usernames from steamIDs
@@ -196,7 +188,6 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util
 	// Only 100 steamIDs can be given per call, hence we must
 	// divide the friends list into lists of 100 or less
 	callCount, remainder := Divmod(friendsListLen, 100)
-
 	// less than 100 friends, only 1 call is needed
 	if callCount < 1 {
 		for ind, val := range friendsObj.FriendsList.Friends {
@@ -207,16 +198,11 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util
 			}
 		}
 		steamIDsList += ""
-
-		targetURL = fmt.Sprintf("http://api.steampowered.com/I SteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamIDsList)
-		res, err = http.Get(targetURL)
-		util.CheckErr(err)
-		body, err = ioutil.ReadAll(res.Body)
-		defer res.Body.Close()
-		util.CheckErr(err)
-
-		var userStatsObj util.UserStatsStruct
-		json.Unmarshal(body, &userStatsObj)
+		userStatsObj, err := cntr.CallPlayerSummaryAPI(steamIDsList, apiKey)
+		if err != nil {
+			var temp util.FriendsStruct
+			return temp, util.MakeErr(err)
+		}
 
 		// Order of received friends is random,
 		// must assign them using map[steamID]username
@@ -248,15 +234,11 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util
 				}
 			}
 
-			targetURL = fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", apiKey, steamIDsList)
-			res, err = http.Get(targetURL)
-			util.CheckErr(err)
-			body, err = ioutil.ReadAll(res.Body)
-			defer res.Body.Close()
-			util.CheckErr(err)
-
-			var userStatsObj util.UserStatsStruct
-			json.Unmarshal(body, &userStatsObj)
+			userStatsObj, err := cntr.CallPlayerSummaryAPI(steamIDsList, apiKey)
+			if err != nil {
+				var temp util.FriendsStruct
+				return temp, util.MakeErr(err)
+			}
 
 			// Order of received friends is random,
 			// must assign them using map[steamID]username
@@ -280,18 +262,20 @@ func GetFriends(steamID, apiKey string, level int, jobs <-chan JobsStruct) (util
 
 	}
 
-	username, err := util.GetUsername(apiKey, steamID)
-	util.CheckErr(err)
+	username, err := util.GetUsername(cntr, apiKey, steamID)
+	if err != nil {
+		return friendsObj, util.MakeErr(err)
+	}
 	friendsObj.Username = username
-
-	WriteToFile(apiKey, steamID, friendsObj)
-
+	WriteToFile(cntr, apiKey, steamID, friendsObj)
 	// log the request along the round trip delay
-	LogCall(fmt.Sprintf("GET [%d][%d]", level, len(jobs)), steamID, friendsObj.Username, "200", util.Green, startTime)
+	LogCall(cntr, fmt.Sprintf("GET [%d][%d]", level, len(jobs)), steamID, friendsObj.Username, "200", util.Green, startTime)
 	return friendsObj, nil
 }
 
-func ControlFunc(apiKeys []string, steamID string, levelCap, workerAmount int) {
+// ControlFunc is the parent function of Worker. It adds the target user to the jobs queue and then processes the
+// results queue until all users below the target level have been crawled
+func ControlFunc(cntr util.ControllerInterface, apiKeys []string, steamID string, levelCap, workerAmount int) {
 	workConfig, err := InitWorkerConfig(levelCap, workerAmount)
 	if err != nil {
 		log.Fatal(err)
@@ -301,7 +285,7 @@ func ControlFunc(apiKeys []string, steamID string, levelCap, workerAmount int) {
 	// Therefore some rapid scaling is needed
 	// Level 2: 8100 buffer length
 	// Level 3: 729000 buffer length
-	// Level 4: 6.561e+07 buffer length (This is not feasable to crawl)
+	// Level 4: 6.561e+07 buffer length (This is not feasible to crawl)
 	chanLen := 0
 	if levelCap <= 2 {
 		chanLen = 700
@@ -315,7 +299,7 @@ func ControlFunc(apiKeys []string, steamID string, levelCap, workerAmount int) {
 	friendsPerLevel := make(map[int]int)
 
 	for i := 0; i < workConfig.WorkerAmount; i++ {
-		go Worker(jobs, results, workConfig, &activeJobs)
+		go Worker(cntr, jobs, results, workConfig, &activeJobs)
 	}
 
 	tempStruct := JobsStruct{
@@ -373,115 +357,136 @@ func Divmod(numerator, denominator int) (quotient, remainder int) {
 }
 
 // LogCall logs a call to the API with various stats on the request
-func LogCall(method, steamID, username, status, statusColor string, startTime int64) {
+func LogCall(cntr util.ControllerInterface, method, steamID, username, status, statusColor string, startTime int64) {
 	endTime := time.Now().UnixNano() / int64(time.Millisecond)
 	delay := strconv.FormatInt((endTime - startTime), 10)
 
-	fmt.Printf("%s [%s] %s %s%s%s %vms\n", method, steamID, username,
+	logMsg := fmt.Sprintf("%s [%s] %s %s%s%s %vms\n", method, steamID, username,
 		statusColor, status, "\033[0m", delay)
+	logging.SpecialLog(cntr, logMsg)
+	fmt.Printf("%s", logMsg)
 }
 
 // WriteToFile writes a user's friendlist to a file for later processing
-func WriteToFile(apiKey, steamID string, friends util.FriendsStruct) {
-	cacheFolder := "userData"
-	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
+func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends util.FriendsStruct) {
+	cacheFolder := appConfig.CacheFolderLocation
+	if cacheFolder == "" {
+		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
-	if existing := CacheFileExist(steamID); !existing {
-		file, err := os.Create(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
-		util.CheckErr(err)
-		defer file.Close()
-
-		jsonObj, err := json.Marshal(friends)
-		util.CheckErr(err)
-
-		w := gzip.NewWriter(file)
-		w.Write([]byte(jsonObj))
-		w.Close()
-	}
-}
-
-// GetCache gets a user's cached records if it exists
-func GetCache(steamID string) (util.FriendsStruct, error) {
-	var temp util.FriendsStruct
-	cacheFolder := "userData"
-	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
-	}
-
-	if exists := CacheFileExist(steamID); exists {
-		file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
-		defer file.Close()
+	if existing := CacheFileExists(cntr, steamID); !existing {
+		file, err := cntr.CreateFile(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		gz, _ := gzip.NewReader(file)
-		defer gz.Close()
-
-		scanner := bufio.NewScanner(gz)
-		res := ""
-		for scanner.Scan() {
-			res += scanner.Text()
+		jsonObj, err := json.Marshal(friends)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = cntr.WriteGzip(file, string(jsonObj))
+		if err != nil {
+			log.Fatal(err)
 		}
 
-		_ = json.Unmarshal([]byte(res), &temp)
+		err = file.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+// GetCache gets a user's cached records if it exists
+func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct, error) {
+	var temp util.FriendsStruct
+	cacheFolder := appConfig.CacheFolderLocation
+
+	if exists := CacheFileExists(cntr, steamID); exists {
+		file, err := cntr.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
+		if err != nil {
+			return temp, util.MakeErr(err)
+		}
+		gz, err := gzip.NewReader(file)
+		if err != nil {
+			return temp, util.MakeErr(err)
+		}
+		// scanner := bufio.NewScanner(gz)
+		// res := ""
+		// for scanner.Scan() {
+		// 	res += scanner.Text()
+		// }
+		s, err := ioutil.ReadAll(gz)
+		if err != nil {
+			return temp, util.MakeErr(err)
+		}
+
+		err = json.Unmarshal([]byte(s), &temp)
+		if err != nil {
+			return temp, util.MakeErr(err)
+		}
+		err = file.Close()
+		if err != nil {
+			return temp, util.MakeErr(err)
+		}
+		err = gz.Close()
+		if err != nil {
+			return temp, util.MakeErr(err)
+		}
+
 		return temp, nil
 	}
 
-	return temp, fmt.Errorf("Cache file %s.gz does not exist", steamID)
+	return temp, util.MakeErr(fmt.Errorf("cache file %s.gz does not exist", steamID))
 }
 
 // GetUsernameFromCacheFile gets the username for a given cache file
 // e.g 76561198063271448 -> moose
-func GetUsernameFromCacheFile(steamID string) (string, error) {
+func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (string, error) {
 	var temp util.FriendsStruct
-	cacheFolder := "userData"
-	if exists := util.IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
+	cacheFolder := appConfig.CacheFolderLocation
+	if cacheFolder == "" {
+		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
-	if exists := CacheFileExist(steamID); exists {
-		file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
-		defer file.Close()
+	if exists := CacheFileExists(cntr, steamID); exists {
+		file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		if err != nil {
-			return "", err
+			return "", util.MakeErr(err)
 		}
-
-		gz, _ := gzip.NewReader(file)
-		defer gz.Close()
-
+		gz, err := gzip.NewReader(file)
+		if err != nil {
+			return "", util.MakeErr(err)
+		}
 		scanner := bufio.NewScanner(gz)
 		res := ""
 		for scanner.Scan() {
 			res += scanner.Text()
 		}
+		err = json.Unmarshal([]byte(res), &temp)
+		if err != nil {
+			return "", util.MakeErr(err)
+		}
+		err = file.Close()
+		if err != nil {
+			return "", util.MakeErr(err)
+		}
+		err = gz.Close()
+		if err != nil {
+			return "", util.MakeErr(err)
+		}
 
-		_ = json.Unmarshal([]byte(res), &temp)
 		return temp.Username, nil
 	}
 
-	return "", fmt.Errorf("Cache file %s.gz does not exist", steamID)
-}
-
-func IsEnvVarSet(envvar string) bool {
-	if _, exists := os.LookupEnv(envvar); exists {
-		return true
-	}
-	return false
+	return "", util.MakeErr(fmt.Errorf("cache file %s.gz does not exist", steamID))
 }
 
 // CacheFileExists checks whether a given cached file exists
-func CacheFileExist(steamID string) bool {
-	cacheFolder := "userData"
-	if exists := IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
+func CacheFileExists(cntr util.ControllerInterface, steamID string) bool {
+	cacheFolder := appConfig.CacheFolderLocation
+	if cacheFolder == "" {
+		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
-	_, err := os.Stat(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
+	return cntr.FileExists(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 }

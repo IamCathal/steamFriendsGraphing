@@ -8,21 +8,31 @@ import (
 	"time"
 )
 
-type BasicResponse struct {
-	Status int    `json:"status"`
-	Body   string `json:"body"`
+type statusResponse struct {
+	Status string        `json:"status"`
+	Uptime time.Duration `json:"uptime"`
 }
 
-type Config struct {
+type newConfig struct {
 	Level    string `json:"level"`
 	StatMode string `json:"statMode"`
-	TestKeys string `json:"testKeys"`
 	Workers  string `json:"workers"`
-	SteamID  string `json:"steamID"`
+	SteamID0 string `json:"steamID0"`
+	SteamID1 string `json:"steamID1"`
+}
+
+// inMiddlewareBlackist checks if an endpoint is blacklisted from
+// the middleware function i.e no input validation should occur
+func inMiddlewareBlacklist(endpoint string) bool {
+	_, ok := middlewareBlackList[endpoint]
+	if ok {
+		return true
+	}
+	return false
 }
 
 // LogCall logs a call to the console with it's details
-func LogCall(method, endpoint, status, startTimeString string, cached bool) {
+func LogCall(req *http.Request, status int, startTimeString string, cached bool) {
 	statusColor := "\033[0m"
 	cacheString := ""
 
@@ -39,26 +49,41 @@ func LogCall(method, endpoint, status, startTimeString string, cached bool) {
 
 	// If the HTTP status given is 2XX, give it a nice
 	// green color, otherwise give it a red color
-	if status[0] == '2' {
+	if status < 400 && status > 199 {
 		statusColor = "\033[32m"
 	} else {
 		statusColor = "\033[31m"
 	}
-	fmt.Printf("[%s] %s%s %s %s%s%s %dms\n", time.Now().Format("02-Jan-2006 15:04:05"), cacheString, method, endpoint, statusColor, status, "\033[0m", delay)
+	fmt.Printf("[%s] %s%s %s %s%d%s %dms\n", time.Now().Format("02-Jan-2006 15:04:05"),
+		cacheString, req.Method, req.URL.Path, statusColor, status, "\033[0m", delay)
+}
+
+// sendErrorResponse sends an error response
+func sendErrorResponse(w http.ResponseWriter, r *http.Request, httpStatus int, startTime, errorString string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	res := struct {
+		response string
+	}{
+		response: errorString,
+	}
+	json.NewEncoder(w).Encode(res)
+	LogCall(r, httpStatus, startTime, false)
 }
 
 // DecodeBody takes a typical request and assigns the configuration given
-func DecodeBody(r *http.Request, vars map[string]string) (Config, error) {
-	inputConfig := Config{}
+func DecodeBody(r *http.Request, vars map[string]string) (newConfig, error) {
+	inputConfig := newConfig{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&inputConfig)
 	if err != nil {
 		return inputConfig, err
 	}
+
 	vars["level"] = inputConfig.Level
 	vars["statMode"] = inputConfig.StatMode
-	vars["testKeys"] = inputConfig.TestKeys
 	vars["workers"] = inputConfig.Workers
-	vars["steamID"] = inputConfig.SteamID
+	vars["steamID0"] = inputConfig.SteamID0
+	vars["steamID1"] = inputConfig.SteamID1
 	return inputConfig, nil
 }

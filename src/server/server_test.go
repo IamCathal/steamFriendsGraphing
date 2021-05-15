@@ -1,112 +1,81 @@
+// +build service
+
 package server
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
+	"log"
+	"net/url"
 	"os"
 	"testing"
-	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/steamFriendsGraphing/util"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func readAndUnmarshal(res *httptest.ResponseRecorder) (BasicResponse, error) {
-	resJSON := BasicResponse{}
-	response, err := ioutil.ReadAll(res.Body)
+func createValidAPIKEYSFile() *os.File {
+	file, err := ioutil.TempFile("", "tempAPIKeys.txt")
 	if err != nil {
-		return resJSON, err
+		log.Fatal(err)
 	}
-	err = json.Unmarshal(response, &resJSON)
-	if err != nil {
-		return resJSON, err
-	}
-	return resJSON, nil
+	defer os.Remove(file.Name())
+	file.WriteString("apiKey1\napiKey2\napiKey3")
+	file.Seek(0, 0)
+
+	return file
 }
 
-func initRouter() *mux.Router {
-	r := mux.NewRouter()
-	r.HandleFunc("/", HomeHandler).Methods("GET")
-	r.HandleFunc("/crawl", crawl).Methods("POST")
-	r.HandleFunc("/statlookup", statLookup).Methods("POST")
-	r.Use(CrawlMiddleware)
-	return r
+func TestMain(m *testing.M) {
+	code := m.Run()
+
+	os.Exit(code)
 }
 
 func TestAPIStatus(t *testing.T) {
-	req, _ := http.NewRequest("GET", "/", nil)
-	res := httptest.NewRecorder()
-	initRouter().ServeHTTP(res, req)
-
-	resJSON, err := readAndUnmarshal(res)
-	if err != nil {
-		t.Error("Error reading response")
-	}
-
-	if resJSON.Status != 200 || resJSON.Body != "API is operational" {
-		t.Errorf("Root endpoint not operational")
-	}
+	assert.HTTPStatusCode(t, status, "POST", "/status", nil, 200)
+	assert.HTTPBodyContains(t, status, "POST", "/status", nil, "operational")
 }
 
-func TestStatLookup(t *testing.T) {
-	reqBody, err := json.Marshal(map[string]string{
-		"steamID":  "76561197960271945",
-		"statMode": "true",
-	})
-	if err != nil {
-		t.Error(err)
-	}
+func TestStatLookupWithExpectedUserStats(t *testing.T) {
+	mockController := &util.MockControllerInterface{}
+	SetController(mockController)
 
-	req, _ := http.NewRequest("POST", "/statlookup", bytes.NewBuffer(reqBody))
-	res := httptest.NewRecorder()
-	initRouter().ServeHTTP(res, req)
-
-	resJSON, err := readAndUnmarshal(res)
-	if err != nil {
-		t.Error("Error reading response")
+	expectedGetPlayerSummaryUser := util.UserStatsStruct{
+		Response: util.Response{
+			Players: []util.Player{
+				{
+					Avatarfull:   "expected full avatar url",
+					Profileurl:   "expected profile url",
+					Profilestate: 1,
+					Realname:     "Francis Higgins",
+					Steamid:      "76561198076045001",
+					Personaname:  "expected persona name",
+				},
+			},
+		},
 	}
+	expectedUserStats := expectedGetPlayerSummaryUser.Response.Players[0]
 
-	if resJSON.Status != 200 {
-		t.Errorf("Statlookup endpoint not operational")
-	}
+	file := createValidAPIKEYSFile()
+
+	mockController.On("Open", mock.AnythingOfType("string")).Return(file, nil)
+	mockController.On("CallPlayerSummaryAPI", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(expectedGetPlayerSummaryUser, nil)
+
+	urlVals, _ := url.ParseQuery("steamID0=testSteamID&statmode=true")
+	res := assert.HTTPBody(statLookup, "POST", "/statlookup", urlVals)
+
+	resStruct := util.Player{}
+	json.Unmarshal([]byte(res), &resStruct)
+
+	assert.Equal(t, expectedUserStats, resStruct)
 }
 
 func TestCrawl(t *testing.T) {
-	reqBody, err := json.Marshal(map[string]string{
-		"level":    "3",
-		"testkeys": "false",
-		"workers":  "4",
-		"steamID":  "76561197960271945",
-		"statmode": "true",
-	})
-	if err != nil {
-		t.Error(err)
-	}
+	reqBody := "level=3&testkeys=false&workers=4&steamID0=testSteamID&statmode=true"
+	urlVals, _ := url.ParseQuery(reqBody)
 
-	req, _ := http.NewRequest("POST", "/crawl", bytes.NewBuffer(reqBody))
-	res := httptest.NewRecorder()
-	initRouter().ServeHTTP(res, req)
-
-	resJSON, err := readAndUnmarshal(res)
-	if err != nil {
-		t.Error("Error reading response")
-	}
-
-	if resJSON.Status != 200 {
-		t.Errorf("Crawl endpoint not operational")
-	}
-}
-
-func TestServerRun(t *testing.T) {
-	// There must be a better way to do this
-	// but it'll work for now and it doesn't
-	// mess anything else up
-	fmt.Printf("\n\n")
-	go RunServer("8085")
-	time.Sleep(2 * time.Second)
-	fmt.Printf("\n\n")
-	os.Exit(0)
+	assert.HTTPStatusCode(t, crawl, "POST", "/crawl", urlVals, 200)
+	assert.HTTPBodyContains(t, crawl, "POST", "/crawl", urlVals, "Your finished graph will be saved under")
 }

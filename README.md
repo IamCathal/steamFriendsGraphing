@@ -9,7 +9,7 @@
   </a>
 </p>
 
-![example workflow name](https://github.com/IamCathal/steamFriendsGraphing/workflows/Go/badge.svg) ![coverage badge](src/coverage_badge.png)
+![example workflow name](https://github.com/IamCathal/steamFriendsGraphing/workflows/Go/badge.svg) ![go report card badge](https://goreportcard.com/badge/github.com/iamcathal/steamfriendsgraphing)
 
 ## What's the goal of this project? 
 The goal of this project is to determine the degrees of seperation between any two users on [Steam](https://store.steampowered.com/)
@@ -55,17 +55,26 @@ Now you can run the script. The easiest way is to build and then run the executa
 
 For the moment the easiest way to find your steam64ID is to use [Steam ID Finder](https://steamidfinder.com/)
 
-## How do you get that coverage badge?
+## Testing
 
-I'm using Jordan Pole's [gopherbadger](https://github.com/jpoles1/gopherbadger) in a pre-commit hook. The git hook is quite simple and looks like this:
+Tests are split into two groups; service and integration. Heres how to run each set of tests:
+
+|             |                                                         |
+| ----------- |:-------------------------------------------------------:| 
+| Service     | `cd src && go test -v ./... --tags=service`             |
+| Integration | `cd src && go test -v ./... --tags=integration`         |
+| All         | `cd src && go test -v ./... --tags=service,integration -p 1` |
+
+My personal githook runs all service tests before committing. Heres an example
 ```bash
 #!/bin/bash
-echo "Testing and generating coverage badge, this might take a few seconds"
-badge -png=true
-git add coverage_badge.png
+cd prjectDirectory
+go test -v ./... -tags=service 
 ```
 
-For personal testing I use this command. It runs the tests for all the packages and automatically opens a chrome tab with the coverage report. I leave out the main package since it skews the end result due to not being able to unit test the main function which leaves the package with only 40% coverage.
+For personal testing I use this command. It runs the tests for all the packages and automatically opens a chrome tab with the coverage report.
 ```
-go test `go list ./... | grep -v main` -cover -coverprofile=coverage.out && go tool cover -html=coverage.out -o     coverage.html && google-chrome coverage.html
+go test -v -p 1 ./... -cover -coverprofile=coverage.out --tags=service,integration && \ 
+  go tool cover -html=coverage.out -o coverage.html && \
+    google-chrome coverage.html
 ```
