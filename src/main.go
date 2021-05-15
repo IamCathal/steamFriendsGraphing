@@ -15,10 +15,10 @@ import (
 )
 
 func main() {
-	level := flag.Int("level", 2, "Level of friends you want to crawl. 2 is your friends, 3 is mutual friends etc")
-	statMode := flag.Bool("stat", false, "Simple lookup of a target user.")
+	level := flag.Int("level", 2, "Level of friends you want to crawl. 1 is just one user, 2 is immediate friends, 3 is mutual friends etc")
+	statMode := flag.Bool("stat", false, "Perform a simple lookup of one user to retrieve basic profile details ")
 	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
-	workers := flag.Int("workers", 2, "Amount of workers that are crawling")
+	workers := flag.Int("workers", 2, "Amount of workers used to crawl")
 	httpserver := flag.Bool("httpserver", false, "Run the application as a HTTP server")
 	flag.Parse()
 
