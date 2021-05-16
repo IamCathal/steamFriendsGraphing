@@ -1,0 +1,30 @@
+body {
+  min-height: 100vh;
+  background-color: #3e4343;
+  display: flex;
+  flex-direction: column;
+}
+
+p {
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+  
+
+.hugeText {
+  color: white;
+  font-weight: 700;
+}
+
+.col {
+  border: 2px solid orange;
+}
+
+.row {
+  border: 2px solid gren;
+}
+
+.steamIDInputBox {
+  padding: 8px 20px;
+  border: 2px solid green;
+  border-radius: 8px;
+}

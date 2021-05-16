@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/steamFriendsGraphing/configuration"
 	"github.com/steamFriendsGraphing/util"
 )
 
@@ -20,7 +21,13 @@ var (
 	// middlewareBlacklist indicates whether
 	// a url is to be ignored by the middleware
 	middlewareBlackList map[string]bool
+	// appConfig yep
+	appConfig configuration.Info
 )
+
+func SetConfig(config configuration.Info) {
+	appConfig = config
+}
 
 // SetController sets the controller used for all functions in the server module
 func SetController(controller util.ControllerInterface) {
@@ -115,4 +122,12 @@ func RunServer(port string) {
 
 	log.Printf("Starting web server on http://localhost:%s\n", port)
 	http.ListenAndServe(fmt.Sprintf(":%s", port), r)
+
+	// fs := http.FileServer(http.Dir("/home/cathal/Documents/GitHub/steamFriendsGraphing/static"))
+	// http.Handle("/", fs)
+	// log.Println("Listening on :3000...")
+	// err := http.ListenAndServe(":3000", nil)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 }
