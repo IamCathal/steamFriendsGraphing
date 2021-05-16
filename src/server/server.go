@@ -34,6 +34,11 @@ func SetController(controller util.ControllerInterface) {
 	cntr = controller
 }
 
+func initMiddlewareBlacklist() {
+	middlewareBlackList["/"] = true
+	middlewareBlackList["/status"] = true
+}
+
 // CrawlMiddleware handles some processing of incoming HTTP requests before
 // passing on the requests to their specified endpoint
 func CrawlMiddleware(next http.Handler) http.Handler {
@@ -42,17 +47,17 @@ func CrawlMiddleware(next http.Handler) http.Handler {
 
 		startTime := time.Now().UnixNano() / int64(time.Millisecond)
 		vars["startTime"] = strconv.FormatInt(startTime, 10)
-		// Don't bother with middleware checks if it's the root endpoint
-		if r.URL.Path == "/" || r.URL.Path == "/status" {
+		// Don't bother with middleware checks
+		if _, ok := middlewareBlackList[r.URL.Path]; ok {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		_, err := DecodeBody(r, vars)
-		if err != nil {
-			sendErrorResponse(w, r, http.StatusBadRequest, vars["startTime"], "invalid input")
-			return
-		}
+		// _, err := DecodeBody(r, vars)
+		// if err != nil {
+		// 	sendErrorResponse(w, r, http.StatusBadRequest, vars["startTime"], "invalid input")
+		// 	return
+		// }
 
 		next.ServeHTTP(w, r)
 	})
@@ -96,13 +101,17 @@ func status(w http.ResponseWriter, req *http.Request) {
 		Uptime: time.Since(startTime),
 		Status: "operational",
 	}
-	jsonObj, err := json.Marshal(res)
+	jsonObj, err := json.MarshalIndent(res, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(jsonObj))
 	LogCall(req, http.StatusOK, vars["startTime"], false)
+}
+
+func home(w http.ResponseWriter, req *http.Request) {
+	http.ServeFile(w, req, "/home/cathal/Documents/GitHub/steamFriendsGraphing/static/index.html")
 }
 
 // RunServer initializes and runs the application as a HTTP server
@@ -115,19 +124,25 @@ func RunServer(port string) {
 	middlewareBlackList = mwBlackList
 
 	r := mux.NewRouter()
+	r.HandleFunc("/", home).Methods("GET")
 	r.HandleFunc("/crawl", crawl).Methods("POST")
 	r.HandleFunc("/statlookup", statLookup).Methods("POST")
 	r.HandleFunc("/status", status).Methods("POST")
 	r.Use(CrawlMiddleware)
 
-	log.Printf("Starting web server on http://localhost:%s\n", port)
-	http.ListenAndServe(fmt.Sprintf(":%s", port), r)
+	fs := http.FileServer(http.Dir("/home/cathal/Documents/GitHub/steamFriendsGraphing/static"))
+	r.PathPrefix("/").Handler(http.StripPrefix("/static/", fs))
 
-	// fs := http.FileServer(http.Dir("/home/cathal/Documents/GitHub/steamFriendsGraphing/static"))
-	// http.Handle("/", fs)
-	// log.Println("Listening on :3000...")
-	// err := http.ListenAndServe(":3000", nil)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	log.Printf("Starting web server on http://localhost:%s\n", port)
+
+	srv := &http.Server{
+		Handler: r,
+		Addr:    fmt.Sprintf("127.0.0.1:%s", port),
+		// Good practice: enforce timeouts for servers you create!
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
+	// http.ListenAndServe(fmt.Sprintf(":%s", port), r)
+
 }
