@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -32,11 +33,6 @@ func SetConfig(config configuration.Info) {
 // SetController sets the controller used for all functions in the server module
 func SetController(controller util.ControllerInterface) {
 	cntr = controller
-}
-
-func initMiddlewareBlacklist() {
-	middlewareBlackList["/"] = true
-	middlewareBlackList["/status"] = true
 }
 
 // CrawlMiddleware handles some processing of incoming HTTP requests before
@@ -111,7 +107,7 @@ func status(w http.ResponseWriter, req *http.Request) {
 }
 
 func home(w http.ResponseWriter, req *http.Request) {
-	http.ServeFile(w, req, "/home/cathal/Documents/GitHub/steamFriendsGraphing/static/index.html")
+	http.ServeFile(w, req, filepath.Join(appConfig.StaticDirectoryLocation, "index.html"))
 }
 
 // RunServer initializes and runs the application as a HTTP server
@@ -130,19 +126,17 @@ func RunServer(port string) {
 	r.HandleFunc("/status", status).Methods("POST")
 	r.Use(CrawlMiddleware)
 
-	fs := http.FileServer(http.Dir("/home/cathal/Documents/GitHub/steamFriendsGraphing/static"))
+	fs := http.FileServer(http.Dir(appConfig.StaticDirectoryLocation))
 	r.PathPrefix("/").Handler(http.StripPrefix("/static/", fs))
 
 	log.Printf("Starting web server on http://localhost:%s\n", port)
 
 	srv := &http.Server{
-		Handler: r,
-		Addr:    fmt.Sprintf("127.0.0.1:%s", port),
-		// Good practice: enforce timeouts for servers you create!
+		Handler:      r,
+		Addr:         fmt.Sprintf("127.0.0.1:%s", port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
 	log.Fatal(srv.ListenAndServe())
-	// http.ListenAndServe(fmt.Sprintf(":%s", port), r)
 
 }

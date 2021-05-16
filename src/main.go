@@ -27,6 +27,7 @@ func main() {
 	util.SetConfig(appConfig)
 	worker.SetConfig(appConfig)
 	logging.SetConfig(appConfig)
+	server.SetConfig(appConfig)
 
 	if *httpserver {
 		server.SetController(cntr)
