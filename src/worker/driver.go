@@ -10,6 +10,7 @@ import (
 	"github.com/steamFriendsGraphing/util"
 )
 
+// CrawlOneUser crawls a single user and generates a graph the specified users friend network
 func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.ControllerInterface, config CrawlerConfig) {
 	finishedGraphLocation := ""
 	os.Setenv("CURRTARGET", steamID)
@@ -28,6 +29,7 @@ func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.Contro
 	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
 }
 
+// CrawlOneUser crawls two users and generates a unified graph of their friend networks if possible
 func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr util.ControllerInterface, config CrawlerConfig) {
 	steamIDsIdentifier, err := getSteamIDsIdentifier([]string{steamID1, steamID2}, urlMapping)
 	if err != nil {

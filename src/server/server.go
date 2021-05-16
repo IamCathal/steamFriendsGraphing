@@ -22,10 +22,13 @@ var (
 	middlewareBlackList map[string]bool
 )
 
+// SetController sets the controller used for all functions in the server module
 func SetController(controller util.ControllerInterface) {
 	cntr = controller
 }
 
+// CrawlMiddleware handles some processing of incoming HTTP requests before
+// passing on the requests to their specified endpoint
 func CrawlMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -95,6 +98,7 @@ func status(w http.ResponseWriter, req *http.Request) {
 	LogCall(req, http.StatusOK, vars["startTime"], false)
 }
 
+// RunServer initializes and runs the application as a HTTP server
 func RunServer(port string) {
 	startTime = time.Now()
 

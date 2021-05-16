@@ -17,6 +17,7 @@ var (
 	appConfig configuration.Info
 )
 
+// SetConfig sets the app config for all functions in the logging module
 func SetConfig(config configuration.Info) {
 	appConfig = config
 }
@@ -31,6 +32,7 @@ func CheckErr(err error) {
 	}
 }
 
+// SpecialLog logs to file using logrus
 func SpecialLog(cntr util.ControllerInterface, msg string) {
 	logsFolder := appConfig.LogsFolderLocation
 	if logsFolder == "" {

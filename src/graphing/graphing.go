@@ -28,6 +28,8 @@ type workerConfig struct {
 	activeJobsMutex *sync.Mutex
 }
 
+// GraphData holds all of the data points needed to a friend network
+// graph using go-echarts
 type GraphData struct {
 	SteamID      string
 	Nodes        []charts.GraphNode
@@ -56,8 +58,7 @@ func graphWorker(id int, jobs <-chan infoStruct, results chan<- infoStruct, wCon
 			friendCount := len(friendsObj.FriendsList.Friends)
 
 			// Iterate through the user's friendlist and add them onto the
-			// results channel for future processing. Importantant to link
-			// the current user and this friend so a link can be made later
+			// results channel for future processing.
 			for i := 0; i < friendCount; i++ {
 				tempStruct := infoStruct{
 					level:    job.level + 1,
@@ -82,6 +83,7 @@ func graphWorker(id int, jobs <-chan infoStruct, results chan<- infoStruct, wCon
 	}
 }
 
+// CrawlCachedFriends builds the graph structure from cached users
 func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData {
 	jobs := make(chan infoStruct, 500000)
 	results := make(chan infoStruct, 500000)
@@ -228,8 +230,7 @@ func mergeUsersMaps(startUsersMap, endUsersMap map[int]string) map[int]string {
 	return allUsersMap
 }
 
-// GetDijkstraPath gets the actual shortest path (if possible) between two given
-// users
+// GetDijkstraPath gets the actual shortest path (if possible) between two given users
 func (gData *GraphData) GetDijkstraPath(startUserID, endUserID string) ([]string, bool) {
 	// Convert username to it's associated ID in the dijkstra graph.
 	// This conversion must be carried out because the dijkstra implementation
@@ -261,6 +262,8 @@ func (gData *GraphData) GetDijkstraPath(startUserID, endUserID string) ([]string
 	return bestPathUsernames, true
 }
 
+// MergeDijkstraGraph merges the dijkstra graphs of two users into one logical graph. This
+// enables the application to find the shortest past if any users are present on both graphs
 func MergeDijkstraGraphs(startUserGraph, endUserGraph *dijkstra.Graph, startUsersMap, endUsersMap map[int]string) (*dijkstra.Graph, map[int]string) {
 	allUsersMap := mergeUsersMaps(startUsersMap, endUsersMap)
 
@@ -296,10 +299,8 @@ func MergeDijkstraGraphs(startUserGraph, endUserGraph *dijkstra.Graph, startUser
 			for ID, _ := range indivNode.Arcs {
 				arcConvertedIDUsername := endUsersMap[ID]
 				arcConvertedID, ok := GetKeyFromValue(allUsersMap, arcConvertedIDUsername)
-				if !ok {
-					if convertedID == 0 {
-						log.Fatal("BAD THIS SHOULD NEVER HAPPEN")
-					}
+				if !ok && convertedID == 0 {
+					log.Fatal("BAD THIS SHOULD NEVER HAPPEN")
 				}
 				if exist := NodeExistsInt(arcConvertedID, existingNodesInt); !exist {
 					allGraph.AddVertex(arcConvertedID)
@@ -314,6 +315,7 @@ func MergeDijkstraGraphs(startUserGraph, endUserGraph *dijkstra.Graph, startUser
 	return allGraph, allUsersMap
 }
 
+// Render generates the HTML graph output
 func (gData *GraphData) Render(fileName string) {
 	gData.EchartsGraph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 薄煎饼"},
 		charts.InitOpts{Width: "1800px", Height: "1080px"})
@@ -330,6 +332,7 @@ func (gData *GraphData) Render(fileName string) {
 	gData.EchartsGraph.Render(file)
 }
 
+// InitGraphing kicks off the graphing process
 func InitGraphing(level, workers int, steamID string) *GraphData {
 	fmt.Printf("=============================================\n")
 	fmt.Printf("                GRAPHING\n\n")
