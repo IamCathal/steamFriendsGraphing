@@ -1,17 +1,16 @@
 body {
   min-height: 100vh;
-  background-color: #3e4343;
   display: flex;
+  background-color: white;
   flex-direction: column;
 }
 
-p {
+p, a, input[type="text"] {
   font-family: 'IBM Plex Sans', sans-serif;
+  color: rgb(48, 48, 48);
 }
-  
 
 .hugeText {
-  color: white;
   font-weight: 700;
 }
 
@@ -24,7 +23,33 @@ p {
 }
 
 .steamIDInputBox {
-  padding: 8px 20px;
-  border: 2px solid green;
+  padding: 4px 8px;
+  border: 2px solid rgb(48, 48, 48);
   border-radius: 8px;
+  font-size: 30px;
+}
+
+.crawlSubmitButton {
+  border: none;
+  background-color: rgb(181, 181, 181);
+  border-radius: 3px;
+  padding: 8px 16px; 
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+}
+
+.card {
+  border-radius: 4px;
+}
+
+/* Graphing stuff */
+.item {
+  margin: auto;
+}
+
+.graphContainer {
+  margin-top:30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
