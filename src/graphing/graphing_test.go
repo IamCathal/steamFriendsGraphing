@@ -1,30 +1,24 @@
+// +build service
+
 package graphing
 
-// func getAPIKeysForTesting() []string {
-// 	apiKeys := make([]string, 0)
+import (
+	"os"
+	"testing"
 
-// 	// When being test on the GitHub actions environment
-// 	// it should take keys from from the environment variables
-// 	// rather than the non existent APIKEYS.txt file
-// 	if exists := IsEnvVarSet("GITHUBACTIONS"); exists {
-// 		apiKeys = append(apiKeys, os.Getenv("APIKEY"))
-// 		apiKeys = append(apiKeys, os.Getenv("APIKEY1"))
-// 	} else {
-// 		apiKeySlice, err := util.GetAPIKeys()
-// 		util.CheckErr(err)
+	"github.com/go-echarts/go-echarts/charts"
+	"github.com/steamFriendsGraphing/configuration"
+	"github.com/stretchr/testify/assert"
+)
 
-// 		apiKeys = apiKeySlice
-// 	}
+func TestMain(m *testing.M) {
+	appConfig = configuration.InitConfig("testing")
+	SetConfig(appConfig)
 
-// 	return apiKeys
-// }
+	code := m.Run()
 
-// func TestMain(m *testing.M) {
-
-// 	code := m.Run()
-
-// 	os.Exit(code)
-// }
+	os.Exit(code)
+}
 
 // func TestGraphing(t *testing.T) {
 // 	APIKeys := getAPIKeysForTesting()
@@ -51,83 +45,76 @@ package graphing
 // 	InitGraphing(2, 2, "76561198090461077")
 // }
 
-// func TestMergeNodes(t *testing.T) {
-// 	nodes1 := make([]charts.GraphNode, 0)
-// 	nodes2 := make([]charts.GraphNode, 0)
+func TestMergeNodes(t *testing.T) {
+	nodes1 := make([]charts.GraphNode, 0)
+	nodes2 := make([]charts.GraphNode, 0)
 
-// 	nodes1 = append(nodes1, charts.GraphNode{Name: "Cathal"})
-// 	nodes1 = append(nodes1, charts.GraphNode{Name: "Joe"})
-// 	nodes1 = append(nodes1, charts.GraphNode{Name: "Declan"})
-// 	nodes1 = append(nodes1, charts.GraphNode{Name: "Michael"})
+	nodes1 = append(nodes1, charts.GraphNode{Name: "Cathal"})
+	nodes1 = append(nodes1, charts.GraphNode{Name: "Joe"})
+	nodes1 = append(nodes1, charts.GraphNode{Name: "Declan"})
+	nodes1 = append(nodes1, charts.GraphNode{Name: "Michael"})
 
-// 	nodes2 = append(nodes2, charts.GraphNode{Name: "Michael"})
-// 	nodes2 = append(nodes2, charts.GraphNode{Name: "Declan"})
-// 	nodes2 = append(nodes2, charts.GraphNode{Name: "Johnny"})
-// 	nodes2 = append(nodes2, charts.GraphNode{Name: "Mairtin"})
+	nodes2 = append(nodes2, charts.GraphNode{Name: "Michael"})
+	nodes2 = append(nodes2, charts.GraphNode{Name: "Declan"})
+	nodes2 = append(nodes2, charts.GraphNode{Name: "Johnny"})
+	nodes2 = append(nodes2, charts.GraphNode{Name: "Mairtin"})
 
-// 	allNodes := MergeNodes(nodes1, nodes2)
-// 	wantNodes := []string{"Cathal", "Joe", "Declan", "Michael", "Johnny", "Mairtin"}
+	actualNodes := MergeNodes(nodes1, nodes2)
+	wantNodes := []string{"Cathal", "Joe", "Declan", "Michael", "Johnny", "Mairtin"}
 
-// 	for i, name := range wantNodes {
-// 		if allNodes[i].Name != name {
-// 			t.Errorf("Node %d has %s instead of %s", i, allNodes[i].Name, name)
-// 		}
-// 	}
-// }
+	actualNodeNames := []string{}
+	for i, _ := range actualNodes {
+		actualNodeNames = append(actualNodeNames, actualNodes[i].Name)
+	}
 
-// func TestNodeExistsInt(t *testing.T) {
-// 	targetID := 6
-// 	nodeMap := make(map[int]bool, 0)
+	assert.Equal(t, wantNodes, actualNodeNames)
+}
 
-// 	nodeMap[targetID] = true
+func TestNodeExistsInt(t *testing.T) {
+	targetID := 6
+	nodeMap := make(map[int]bool, 0)
 
-// 	if exists := NodeExistsInt(6, nodeMap); !exists {
-// 		t.Errorf("Failed to find ID %d in %+v", targetID, nodeMap)
-// 	}
-// 	targetID = 74
-// 	if exists := NodeExistsInt(targetID, nodeMap); exists {
-// 		t.Errorf("Found non existant ID %d in %+v", targetID, nodeMap)
-// 	}
-// }
+	nodeMap[targetID] = true
 
-// func TestMergeUsersMaps(t *testing.T) {
-// 	startUsersMap := make(map[int]string, 0)
-// 	endUsersMap := make(map[int]string, 0)
+	if exists := NodeExistsInt(6, nodeMap); !exists {
+		t.Errorf("Failed to find ID %d in %+v", targetID, nodeMap)
+	}
+	targetID = 74
+	if exists := NodeExistsInt(targetID, nodeMap); exists {
+		t.Errorf("Found non existant ID %d in %+v", targetID, nodeMap)
+	}
+}
 
-// 	startUsersMap[0] = "Rob Pike"
-// 	startUsersMap[1] = "Robert Griesemer"
-// 	startUsersMap[2] = "Ken Thompson"
+func TestMergeUsersMaps(t *testing.T) {
+	startUsersMap := make(map[int]string, 0)
+	endUsersMap := make(map[int]string, 0)
 
-// 	endUsersMap[0] = "Guido van Rossum"
-// 	endUsersMap[1] = "Rob Pike"
-// 	endUsersMap[2] = "Yukihiro Matsumoto"
+	startUsersMap[0] = "Rob Pike"
+	startUsersMap[1] = "Robert Griesemer"
+	startUsersMap[2] = "Ken Thompson"
+	endUsersMap[0] = "Guido van Rossum"
+	endUsersMap[1] = "Rob Pike"
+	endUsersMap[2] = "Yukihiro Matsumoto"
+	actualUsersMap := mergeUsersMaps(startUsersMap, endUsersMap)
 
-// 	mergedUsersMap := mergeUsersMaps(startUsersMap, endUsersMap)
-// 	if len(mergedUsersMap) != 5 {
-// 		t.Errorf("Failed to merge maps successfully\nstartUsersMap:\t%+v\nendUsersMap:\t%+v\nmergedUsersMap:\t%+v",
-// 			startUsersMap, endUsersMap, mergedUsersMap)
-// 	}
-// }
+	expectedUsersMap := make(map[int]string)
+	expectedUsersMap[0] = "Rob Pike"
+	expectedUsersMap[1] = "Robert Griesemer"
+	expectedUsersMap[2] = "Ken Thompson"
+	expectedUsersMap[4] = "Guido van Rossum"
+	expectedUsersMap[5] = "Yukihiro Matsumoto"
 
-// // func TestMergeDijkstraGraphs(t *testing.T) {
-// // 	startUsersMap := make(map[int]string, 0)
-// // 	endUsersMap := make(map[int]string, 0)
+	allActualUsers := []string{}
+	for _, name := range actualUsersMap {
+		allActualUsers = append(allActualUsers, name)
+	}
+	allExpectedUsers := []string{}
+	for _, name := range expectedUsersMap {
+		allExpectedUsers = append(allExpectedUsers, name)
+	}
 
-// // 	startUsersMap[0] = "Rob Pike"
-// // 	startUsersMap[1] = "Robert Griesemer"
-// // 	startUsersMap[2] = "Ken Thompson"
-
-// // 	endUsersMap[0] = "Guido van Rossum"
-// // 	endUsersMap[1] = "Rob Pike"
-// // 	endUsersMap[2] = "Yukihiro Matsumoto"
-
-// // }
-
-// func TestCreateFinishedGraphs(t *testing.T) {
-// 	if err := CreateFinishedGraphFolder(); err != nil {
-// 		t.Error(err)
-// 	}
-// }
+	assert.ElementsMatch(t, allExpectedUsers, allActualUsers)
+}
 
 // func TestRender(t *testing.T) {
 // 	graph := charts.NewGraph()
