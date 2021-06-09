@@ -60,14 +60,14 @@ func TestMergeNodes(t *testing.T) {
 	nodes2 = append(nodes2, charts.GraphNode{Name: "Mairtin"})
 
 	actualNodes := MergeNodes(nodes1, nodes2)
-	wantNodes := []string{"Cathal", "Joe", "Declan", "Michael", "Johnny", "Mairtin"}
+	expectedNodes := []string{"Cathal", "Joe", "Declan", "Michael", "Johnny", "Mairtin"}
 
 	actualNodeNames := []string{}
 	for i, _ := range actualNodes {
 		actualNodeNames = append(actualNodeNames, actualNodes[i].Name)
 	}
 
-	assert.Equal(t, wantNodes, actualNodeNames)
+	assert.Equal(t, expectedNodes, actualNodeNames)
 }
 
 func TestNodeExistsInt(t *testing.T) {
