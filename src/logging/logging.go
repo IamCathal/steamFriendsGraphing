@@ -33,10 +33,11 @@ func CheckErr(err error) {
 }
 
 // SpecialLog logs to file using logrus
-func SpecialLog(cntr util.ControllerInterface, msg string) {
+func SpecialLog(cntr util.ControllerInterface, msg string) error {
 	logsFolder := appConfig.LogsFolderLocation
 	if logsFolder == "" {
-		util.ThrowErr(errors.New("config.LogsFolderLocation was not initialised before attempting to write to file"))
+		return util.MakeErr(errors.New("appConfig.LogsFolderLocation was not initialised before attempting to write to file"))
+		// util.ThrowErr(errors.New("appConfig.LogsFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	logg.SetFormatter(&logg.JSONFormatter{})
@@ -45,4 +46,5 @@ func SpecialLog(cntr util.ControllerInterface, msg string) {
 
 	logg.SetOutput(file)
 	logg.WithFields(logg.Fields{}).Info(msg)
+	return nil
 }

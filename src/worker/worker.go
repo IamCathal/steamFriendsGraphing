@@ -157,7 +157,8 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 
 	// If the cache exists and the env var to disable serving from cache is not set
-	if exists := CacheFileExists(cntr, steamID); exists {
+	exists, err := CacheFileExists(cntr, steamID)
+	if exists {
 		if readCacheDisabled := IsEnvVarSet("disablereadcache"); !readCacheDisabled {
 			friendsObj, err := GetCache(cntr, steamID)
 			if err != nil {
@@ -166,6 +167,9 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 			LogCall(cntr, "GET", steamID, friendsObj.Username, "200", util.Green, startTime)
 			return friendsObj, nil
 		}
+	}
+	if err != nil {
+		return util.FriendsStruct{}, err
 	}
 
 	// Check to see if the steamID is in the valid format now to save time
@@ -368,32 +372,43 @@ func LogCall(cntr util.ControllerInterface, method, steamID, username, status, s
 }
 
 // WriteToFile writes a user's friendlist to a file for later processing
-func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends util.FriendsStruct) {
+func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends util.FriendsStruct) error {
 	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
-		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
+		return util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
+		// util.ThrowErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
-	if existing := CacheFileExists(cntr, steamID); !existing {
+	existing, err := CacheFileExists(cntr, steamID)
+	if !existing {
 		file, err := cntr.CreateFile(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		if err != nil {
-			log.Fatal(err)
+			return util.MakeErr(err)
+			// log.Fatal(err)
 		}
 
 		jsonObj, err := json.Marshal(friends)
 		if err != nil {
-			log.Fatal(err)
+			return util.MakeErr(err)
+			// log.Fatal(err)
 		}
 		err = cntr.WriteGzip(file, string(jsonObj))
 		if err != nil {
-			log.Fatal(err)
+			return util.MakeErr(err)
+			// log.Fatal(err)
 		}
 
 		err = file.Close()
 		if err != nil {
-			log.Fatal(err)
+			return util.MakeErr(err)
+			// log.Fatal(err)
 		}
 	}
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetCache gets a user's cached records if it exists
@@ -401,7 +416,8 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 	var temp util.FriendsStruct
 	cacheFolder := appConfig.CacheFolderLocation
 
-	if exists := CacheFileExists(cntr, steamID); exists {
+	exists, err := CacheFileExists(cntr, steamID)
+	if exists {
 		file, err := cntr.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		if err != nil {
 			return temp, util.MakeErr(err)
@@ -435,6 +451,9 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 
 		return temp, nil
 	}
+	if err != nil {
+		return temp, err
+	}
 
 	return temp, util.MakeErr(fmt.Errorf("cache file %s.gz does not exist", steamID))
 }
@@ -445,10 +464,12 @@ func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (st
 	var temp util.FriendsStruct
 	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
-		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
+		return "", util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
+		// util.ThrowErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
-	if exists := CacheFileExists(cntr, steamID); exists {
+	exists, err := CacheFileExists(cntr, steamID)
+	if exists {
 		file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		if err != nil {
 			return "", util.MakeErr(err)
@@ -477,16 +498,20 @@ func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (st
 
 		return temp.Username, nil
 	}
+	if err != nil {
+		return "", err
+	}
 
 	return "", util.MakeErr(fmt.Errorf("cache file %s.gz does not exist", steamID))
 }
 
 // CacheFileExists checks whether a given cached file exists
-func CacheFileExists(cntr util.ControllerInterface, steamID string) bool {
+func CacheFileExists(cntr util.ControllerInterface, steamID string) (bool, error) {
 	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
-		util.ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
+		return false, util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
+		// util.ThrowErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
-	return cntr.FileExists(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
+	return cntr.FileExists(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID)), nil
 }

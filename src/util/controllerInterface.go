@@ -132,7 +132,5 @@ func (controller Controller) WriteGzip(file *os.File, content string) error {
 	w := gzip.NewWriter(file)
 	_, err := w.Write([]byte(content))
 	defer w.Close()
-
-	fmt.Println("controllerIntercace.WriteGzip: Error writing gzip")
 	return err
 }

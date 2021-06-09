@@ -50,7 +50,10 @@ func main() {
 		APIKeys:  apiKeys,
 	}
 
-	urlMap := worker.LoadMappings()
+	urlMap, err := worker.LoadMappings()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if len(os.Args) < 1 {
 		fmt.Printf("Incorrect arguments\nUsage: ./main [arguments] steamID\n")
