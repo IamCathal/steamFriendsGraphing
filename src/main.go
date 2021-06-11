@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/steamFriendsGraphing/configuration"
+	"github.com/steamFriendsGraphing/graphing"
 	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/server"
 	"github.com/steamFriendsGraphing/util"
@@ -28,6 +29,7 @@ func main() {
 	worker.SetConfig(appConfig)
 	logging.SetConfig(appConfig)
 	server.SetConfig(appConfig)
+	graphing.SetConfig(appConfig)
 
 	if *httpserver {
 		server.SetController(cntr)
