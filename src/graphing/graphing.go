@@ -342,11 +342,10 @@ func (gData *GraphData) Render(fileName string) {
 }
 
 // InitGraphing kicks off the graphing process
-func InitGraphing(level, workers int, steamID string) *GraphData {
+func InitGraphing(level, workers int, steamID string) (*GraphData, error) {
 	fmt.Printf("=============================================\n")
 	fmt.Printf("                GRAPHING\n\n")
 	username, err := GetUsernameFromCacheFile(steamID)
-	CheckErr(err)
 
-	return CrawlCachedFriends(level, workers, steamID, username)
+	return CrawlCachedFriends(level, workers, steamID, username), err
 }
