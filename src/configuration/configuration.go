@@ -35,15 +35,16 @@ func InitConfig(mode string) Info {
 		baseFolder = fmt.Sprintf("%s/../../", path)
 		cacheFolderLocation = filepath.Join(baseFolder, "testData")
 		logsFolderLocation = filepath.Join(baseFolder, "testLogs")
+		finishedGraphsLocation = filepath.Join(baseFolder, "testFinishedGraphs")
 	} else {
 		baseFolder = fmt.Sprintf("%s/../", path)
 		cacheFolderLocation = filepath.Join(baseFolder, "userData")
 		logsFolderLocation = filepath.Join(baseFolder, "logs")
+		finishedGraphsLocation = filepath.Join(baseFolder, "finishedGraphs")
 	}
 
 	apiKeysFileLocation = filepath.Join(baseFolder, "APIKEYS.txt")
 	urlMappingsLocation = filepath.Join(baseFolder, "config/urlMappings.txt")
-	finishedGraphsLocation = filepath.Join(baseFolder, "finishedGraphs")
 	staticDirectoyLocation = filepath.Join(baseFolder, "static/")
 
 	return Info{
