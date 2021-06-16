@@ -41,7 +41,7 @@ func getAPIKeysForTesting() []string {
 
 func TestMain(m *testing.M) {
 	// Setup apikeys and config or all tests
-	config := configuration.InitConfig("testing")
+	config := configuration.InitConfig("testing", false)
 
 	// Initialise config for all packages that interact
 	// with either log or cache files
@@ -102,6 +102,27 @@ func TestEndToEndCrawlingAndGraphingFunctionalityWithOneUser(t *testing.T) {
 	}
 
 	err := worker.CrawlOneUser(targetSteamID, mockUrlMap, cntr, crawlerConfig)
+
+	assert.Nil(t, err)
+}
+
+func TestEndToEndCrawlingAndGraphingFunctionalityWithTwoUsers(t *testing.T) {
+	cntr := util.Controller{}
+
+	firstTargetSteamID := "76561198130544932"
+	secondTargetSteamID := "76561198305082260"
+	mockUrlMap := make(map[string]string)
+	// mockUrlMap[targetSteamID] = "outputGraphFor76561198130544932"
+
+	crawlerConfig := worker.CrawlerConfig{
+		Level:    2,
+		StatMode: false,
+		TestKeys: false,
+		Workers:  5,
+		APIKeys:  getAPIKeysForTesting(),
+	}
+
+	err := worker.CrawlTwoUsers(firstTargetSteamID, secondTargetSteamID, mockUrlMap, cntr, crawlerConfig)
 
 	assert.Nil(t, err)
 }
