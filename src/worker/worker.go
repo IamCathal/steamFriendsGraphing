@@ -156,10 +156,9 @@ func Worker(cntr util.ControllerInterface, jobs <-chan JobsStruct, results chan<
 func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int, jobs <-chan JobsStruct) (util.FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 
-	// If the cache exists and the env var to disable serving from cache is not set
 	exists, err := CacheFileExists(cntr, steamID)
 	if exists {
-		if readCacheDisabled := IsEnvVarSet("disablereadcache"); !readCacheDisabled {
+		if !appConfig.IgnoreCache {
 			friendsObj, err := GetCache(cntr, steamID)
 			if err != nil {
 				return friendsObj, err

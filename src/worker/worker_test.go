@@ -19,7 +19,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	appConfig = configuration.InitConfig("testing")
+	appConfig = configuration.InitConfig("testing", false)
 	// Initialise config for all packages that interact
 	// with either log or cache files
 	util.SetConfig(appConfig)

@@ -16,9 +16,11 @@ type Info struct {
 	UrlMappingsLocation     string
 	FinishedGraphsLocation  string
 	StaticDirectoryLocation string
+
+	IgnoreCache bool
 }
 
-func InitConfig(mode string) Info {
+func InitConfig(mode string, dontReadCache bool) Info {
 	// baseFolder is the root directory for steamFriendsGraphing
 	baseFolder := ""
 	cacheFolderLocation := ""
@@ -54,6 +56,7 @@ func InitConfig(mode string) Info {
 		UrlMappingsLocation:     urlMappingsLocation,
 		FinishedGraphsLocation:  finishedGraphsLocation,
 		StaticDirectoryLocation: staticDirectoyLocation,
+		IgnoreCache:             dontReadCache,
 	}
 }
 

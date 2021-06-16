@@ -21,10 +21,11 @@ func main() {
 	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
 	workers := flag.Int("workers", 2, "Amount of workers used to crawl")
 	httpserver := flag.Bool("httpserver", false, "Run the application as a HTTP server")
+	ignorecache := flag.Bool("ignorecache", false, "Don't read from cache")
 	flag.Parse()
 
 	cntr := util.Controller{}
-	appConfig := configuration.InitConfig("normal")
+	appConfig := configuration.InitConfig("normal", *ignorecache)
 	util.SetConfig(appConfig)
 	worker.SetConfig(appConfig)
 	logging.SetConfig(appConfig)

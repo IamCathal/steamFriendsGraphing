@@ -12,7 +12,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	appConfig = configuration.InitConfig("testing")
+	appConfig = configuration.InitConfig("testing", false)
 	SetConfig(appConfig)
 
 	code := m.Run()
