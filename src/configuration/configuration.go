@@ -18,6 +18,7 @@ type Info struct {
 	StaticDirectoryLocation string
 
 	IgnoreCache bool
+	UrlMap      map[string]string
 }
 
 func InitConfig(mode string, dontReadCache bool) Info {

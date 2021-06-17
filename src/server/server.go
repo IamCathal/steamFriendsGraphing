@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/steamFriendsGraphing/configuration"
 	"github.com/steamFriendsGraphing/util"
+	"github.com/steamFriendsGraphing/worker"
 )
 
 var (
@@ -76,13 +77,46 @@ func statLookup(w http.ResponseWriter, req *http.Request) {
 func crawl(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	// configText := fmt.Sprintf("Level: %s - StatMode: %s - TestKeys: %s - Workers: %s - SteamID: %s",
-	// 	vars["level"], vars["statmode"], vars["testkeys"], vars["workers"], vars["steamID0"])
+	reqConfig, err := DecodeBody(req, vars)
+	if err != nil {
+		sendErrorResponse(w, req, http.StatusBadRequest, vars["startTime"], "invalid input")
+		return
+	}
+
+	apiKeys, err := util.GetAPIKeys(cntr)
+	util.CheckErr(err)
+
+	statMode := false
+	if reqConfig.StatMode == "true" {
+		statMode = true
+	}
+
+	level, _ := strconv.Atoi(reqConfig.Level)
+	workers, _ := strconv.Atoi(reqConfig.Workers)
+
+	crawlConfig := worker.CrawlerConfig{
+		Level:    level,
+		StatMode: statMode,
+		TestKeys: false,
+		Workers:  workers,
+		APIKeys:  apiKeys,
+	}
+
+	// fmt.Printf("%+v\n", crawlConfig)
+
+	urlMap, err := worker.LoadMappings()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go worker.CrawlOneUser(reqConfig.SteamID0, urlMap, util.Controller{}, crawlConfig)
+
+	finishedGraphLocation := fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMap[reqConfig.SteamID0])
 
 	res := struct {
 		Body string
 	}{
-		Body: fmt.Sprintf("Your finished graph will be saved under %s.html", vars["steamID0"]),
+		Body: fmt.Sprintf("Your finished graph will be saved under %s", finishedGraphLocation),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -110,6 +144,18 @@ func home(w http.ResponseWriter, req *http.Request) {
 	http.ServeFile(w, req, filepath.Join(appConfig.StaticDirectoryLocation, "index.html"))
 }
 
+func setupRouter() *mux.Router {
+	r := mux.NewRouter()
+	r.HandleFunc("/", home).Methods("GET")
+	r.HandleFunc("/graph/{id}", serveGraph)
+	r.HandleFunc("/crawl", crawl).Methods("POST")
+	r.HandleFunc("/statlookup", statLookup).Methods("POST")
+	r.HandleFunc("/status", status).Methods("POST")
+	r.Use(CrawlMiddleware)
+
+	return r
+}
+
 // RunServer initializes and runs the application as a HTTP server
 func RunServer(port string) {
 	startTime = time.Now()
@@ -119,15 +165,10 @@ func RunServer(port string) {
 	mwBlackList["/status"] = true
 	middlewareBlackList = mwBlackList
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", home).Methods("GET")
-	r.HandleFunc("/crawl", crawl).Methods("POST")
-	r.HandleFunc("/statlookup", statLookup).Methods("POST")
-	r.HandleFunc("/status", status).Methods("POST")
-	r.Use(CrawlMiddleware)
+	r := setupRouter()
 
 	fs := http.FileServer(http.Dir(appConfig.StaticDirectoryLocation))
-	r.PathPrefix("/").Handler(http.StripPrefix("/static/", fs))
+	r.PathPrefix("/").Handler(http.StripPrefix("/static", fs))
 
 	log.Printf("Starting web server on http://localhost:%s\n", port)
 
