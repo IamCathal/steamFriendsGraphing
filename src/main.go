@@ -82,9 +82,15 @@ func main() {
 
 	switch len(steamIDs) {
 	case 1:
-		worker.CrawlOneUser(steamIDs[0], appConfig.UrlMap, cntr, config)
+		err := worker.CrawlOneUser(steamIDs[0], appConfig.UrlMap, cntr, config)
+		if err != nil {
+			panic(err)
+		}
 	case 2:
-		worker.CrawlTwoUsers(steamIDs[0], steamIDs[1], appConfig.UrlMap, cntr, config)
+		err := worker.CrawlTwoUsers(steamIDs[0], steamIDs[1], appConfig.UrlMap, cntr, config)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 }
