@@ -42,7 +42,6 @@ func SpecialLog(cntr util.ControllerInterface, logFileName, msg string) error {
 
 	logg.SetFormatter(&logg.JSONFormatter{})
 	file, err := cntr.OpenFile(fmt.Sprintf("%s/%s.txt", logsFolder, logFileName), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0755)
-	fmt.Printf("Writing to: %s", fmt.Sprintf("%s/%s.txt", logsFolder, logFileName))
 	CheckErr(err)
 
 	logg.SetOutput(file)

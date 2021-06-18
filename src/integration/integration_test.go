@@ -75,7 +75,14 @@ func TestGetUsernameFromCacheFile(t *testing.T) {
 	targetSteamID := "76561198130544932"
 	expectedUsername := "nestororan100"
 
-	_, err := worker.GetFriends(cntr, targetSteamID, apiKeys[0], 1, jobs)
+	firstJob := worker.JobsStruct{
+		OriginalTargetUserSteamID: targetSteamID,
+		CurrentTargetSteamID:      targetSteamID,
+		Level:                     1,
+		APIKey:                    apiKeys[0],
+	}
+
+	_, err := worker.GetFriends(cntr, firstJob, 1, jobs)
 	if err != nil {
 		t.Error(err)
 	}

@@ -366,7 +366,6 @@ func LogCall(cntr util.ControllerInterface, method string, job JobsStruct, usern
 
 	logMsg := fmt.Sprintf("%s [%s] %s %s%s%s %vms\n", method, job.CurrentTargetSteamID, username,
 		statusColor, status, "\033[0m", delay)
-	fmt.Println(appConfig.UrlMap[job.OriginalTargetUserSteamID])
 	logging.SpecialLog(cntr, appConfig.UrlMap[job.OriginalTargetUserSteamID], logMsg)
 	fmt.Printf("%s", logMsg)
 }
