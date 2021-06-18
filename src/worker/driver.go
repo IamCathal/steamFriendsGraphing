@@ -2,7 +2,6 @@ package worker
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/go-echarts/go-echarts/charts"
@@ -40,7 +39,7 @@ func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.Contro
 func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr util.ControllerInterface, config CrawlerConfig) error {
 	steamIDsIdentifier, err := getSteamIDsIdentifier([]string{steamID1, steamID2}, urlMapping)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	finishedGraphLocation := ""
 
@@ -48,10 +47,7 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 		GenerateURL(steamIDsIdentifier, urlMapping)
 		finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
 
-		os.Setenv("CURRTARGET", steamID1)
 		InitCrawling(cntr, config, steamID1)
-
-		os.Setenv("CURRTARGET", steamID2)
 		InitCrawling(cntr, config, steamID2)
 
 		StartUserGraphData, err := graphing.InitGraphing(config.Level, config.Workers, steamID1)

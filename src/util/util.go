@@ -142,7 +142,6 @@ func CheckAPIKeys(cntr ControllerInterface, apiKeys []string) error {
 
 		if valid := IsValidResponseForAPIKey(response); !valid {
 			return MakeErr(fmt.Errorf("invalid api key %s", apiKey))
-			// ThrowErr(fmt.Errorf("invalid api key %s", apiKey))
 		}
 
 		fmt.Printf("\r[%d] Testing %s ... %svalid!%s\n", i, apiKey, Green, White)
