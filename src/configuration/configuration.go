@@ -63,9 +63,7 @@ func InitConfig(mode string, dontReadCache bool) Info {
 	}
 
 	urlMap, err := loadMappings(initialisedAppConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckErr(err)
 
 	initialisedAppConfig.UrlMap = urlMap
 

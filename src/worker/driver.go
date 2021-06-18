@@ -25,7 +25,10 @@ func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.Contro
 		}
 
 		finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamID])
-		gData.Render(finishedGraphLocation)
+		err = gData.Render(finishedGraphLocation)
+		if err != nil {
+			return err
+		}
 	}
 
 	finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamID])

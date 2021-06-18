@@ -12,6 +12,7 @@ import (
 	"github.com/go-echarts/go-echarts/charts"
 	dijkstra "github.com/iamcathal/dijkstra2"
 	"github.com/steamFriendsGraphing/configuration"
+	"github.com/steamFriendsGraphing/util"
 )
 
 type graphConfig struct {
@@ -246,12 +247,19 @@ func (gData *GraphData) GetDijkstraPath(startUserID, endUserID string) ([]string
 	// only works based off of the ID field which is an int
 	firstUsername, err := GetUsernameFromCacheFile(startUserID)
 	CheckErr(err)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to get username from cache file for username: %s", firstUsername)
+		log.Fatal(util.MakeErr(err, errMsg))
+	}
 	firstUser, ok := GetKeyFromValue(gData.UsersMap, firstUsername)
 	if !ok {
 		fmt.Printf("User %s has not been crawled\n", firstUsername)
 	}
 	secondUsername, err := GetUsernameFromCacheFile(endUserID)
-	CheckErr(err)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to get username from cache file for username: %s", secondUsername)
+		log.Fatal(util.MakeErr(err, errMsg))
+	}
 	secondUser, ok := GetKeyFromValue(gData.UsersMap, secondUsername)
 	if !ok {
 		fmt.Printf("User %s has not been crawled\n", secondUsername)
@@ -325,7 +333,7 @@ func MergeDijkstraGraphs(startUserGraph, endUserGraph *dijkstra.Graph, startUser
 }
 
 // Render generates the HTML graph output
-func (gData *GraphData) Render(fileName string) {
+func (gData *GraphData) Render(fileName string) error {
 	gData.EchartsGraph.SetGlobalOptions(charts.TitleOpts{Title: "Yop the ladeens 薄煎饼"},
 		charts.InitOpts{Width: "1800px", Height: "1080px"})
 
@@ -335,10 +343,15 @@ func (gData *GraphData) Render(fileName string) {
 		charts.LineStyleOpts{Width: 1, Color: "#b5b5b5"},
 	)
 	err := CreateFinishedGraphFolder()
-	CheckErr(err)
+	if err != nil {
+		return err
+	}
 	file, err := os.Create(fmt.Sprintf("%s.html", fileName))
-	CheckErr(err)
+	if err != nil {
+		return err
+	}
 	gData.EchartsGraph.Render(file)
+	return nil
 }
 
 // InitGraphing kicks off the graphing process
