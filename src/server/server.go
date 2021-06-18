@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/steamFriendsGraphing/configuration"
+	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/steamFriendsGraphing/worker"
 )
@@ -66,7 +67,21 @@ func statLookup(w http.ResponseWriter, req *http.Request) {
 	util.CheckErr(err)
 
 	userStats, err := util.GetUserDetails(cntr, apiKeys[0], vars["steamID0"])
-	util.CheckErr(err)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		res := struct {
+			Status int
+			Body   string
+		}{
+			Status: http.StatusInternalServerError,
+			Body:   "something went wrong",
+		}
+		json.NewEncoder(w).Encode(res)
+		LogCall(req, http.StatusInternalServerError, vars["startTime"], false)
+		logging.SpecialLog(cntr, err.Error())
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
