@@ -161,7 +161,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 		if !appConfig.IgnoreCache {
 			friendsObj, err := GetCache(cntr, steamID)
 			if err != nil {
-				return friendsObj, err
+				return util.FriendsStruct{}, err
 			}
 			LogCall(cntr, "GET", steamID, friendsObj.Username, "200", util.Green, startTime)
 			return friendsObj, nil
@@ -174,14 +174,12 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 	// Check to see if the steamID is in the valid format now to save time
 	if valid := util.IsValidFormatSteamID(steamID); !valid {
 		LogCall(cntr, "GET", steamID, "Invalid SteamID", "400", util.Red, startTime)
-		var temp util.FriendsStruct
-		return temp, util.MakeErr(fmt.Errorf("invalid steamID: %s, apikey: %s", steamID, apiKey))
+		return util.FriendsStruct{}, util.MakeErr(fmt.Errorf("invalid steamID: %s, apikey: %s", steamID, apiKey))
 	}
 	friendsObj, err := cntr.CallGetFriendsListAPI(url.QueryEscape(steamID), url.QueryEscape(apiKey))
 	if err != nil {
-		var temp util.FriendsStruct
 		LogCall(cntr, "GET", steamID, friendsObj.Username, "400", util.Red, startTime)
-		return temp, err
+		return util.FriendsStruct{}, err
 	}
 
 	// Gathers usernames from steamIDs
@@ -260,9 +258,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 					friendsObj.FriendsList.Friends[k+(i*100)].Username = friendsMap[friendsObj.FriendsList.Friends[k+(i*100)].Steamid]
 				}
 			}
-
 		}
-
 	}
 
 	username, err := util.GetUsername(cntr, apiKey, steamID)
@@ -375,7 +371,6 @@ func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends 
 	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
 		return util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
-		// util.ThrowErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	existing, err := CacheFileExists(cntr, steamID)
@@ -383,24 +378,20 @@ func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends 
 		file, err := cntr.CreateFile(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID))
 		if err != nil {
 			return util.MakeErr(err)
-			// log.Fatal(err)
 		}
 
 		jsonObj, err := json.Marshal(friends)
 		if err != nil {
 			return util.MakeErr(err)
-			// log.Fatal(err)
 		}
 		err = cntr.WriteGzip(file, string(jsonObj))
 		if err != nil {
 			return util.MakeErr(err)
-			// log.Fatal(err)
 		}
 
 		err = file.Close()
 		if err != nil {
 			return util.MakeErr(err)
-			// log.Fatal(err)
 		}
 	}
 	if err != nil {
@@ -425,11 +416,7 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 		if err != nil {
 			return temp, util.MakeErr(err)
 		}
-		// scanner := bufio.NewScanner(gz)
-		// res := ""
-		// for scanner.Scan() {
-		// 	res += scanner.Text()
-		// }
+
 		s, err := ioutil.ReadAll(gz)
 		if err != nil {
 			return temp, util.MakeErr(err)
@@ -454,7 +441,7 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 		return temp, err
 	}
 
-	return temp, util.MakeErr(fmt.Errorf("cache file %s.gz does not exist", steamID))
+	return temp, util.MakeErr(fmt.Errorf("cache file %s/%s.gz does not exist", appConfig.CacheFolderLocation, steamID))
 }
 
 // GetUsernameFromCacheFile gets the username for a given cache file
@@ -464,7 +451,6 @@ func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (st
 	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
 		return "", util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
-		// util.ThrowErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	exists, err := CacheFileExists(cntr, steamID)
@@ -478,6 +464,7 @@ func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (st
 			return "", util.MakeErr(err)
 		}
 		scanner := bufio.NewScanner(gz)
+
 		res := ""
 		for scanner.Scan() {
 			res += scanner.Text()
@@ -509,7 +496,6 @@ func CacheFileExists(cntr util.ControllerInterface, steamID string) (bool, error
 	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
 		return false, util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
-		// util.ThrowErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	return cntr.FileExists(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID)), nil
