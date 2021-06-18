@@ -79,7 +79,7 @@ func statLookup(w http.ResponseWriter, req *http.Request) {
 		}
 		json.NewEncoder(w).Encode(res)
 		LogCall(req, http.StatusInternalServerError, vars["startTime"], false)
-		logging.SpecialLog(cntr, err.Error())
+		logging.SpecialLog(cntr, "errorLog", err.Error())
 		return
 	}
 
@@ -119,14 +119,9 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 
 	// fmt.Printf("%+v\n", crawlConfig)
 
-	urlMap, err := worker.LoadMappings()
-	if err != nil {
-		log.Fatal(err)
-	}
+	go worker.CrawlOneUser(reqConfig.SteamID0, appConfig.UrlMap, util.Controller{}, crawlConfig)
 
-	go worker.CrawlOneUser(reqConfig.SteamID0, urlMap, util.Controller{}, crawlConfig)
-
-	finishedGraphLocation := fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMap[reqConfig.SteamID0])
+	finishedGraphLocation := fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, appConfig.UrlMap[reqConfig.SteamID0])
 
 	res := struct {
 		Body string

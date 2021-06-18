@@ -26,6 +26,7 @@ func main() {
 
 	cntr := util.Controller{}
 	appConfig := configuration.InitConfig("normal", *ignorecache)
+
 	util.SetConfig(appConfig)
 	worker.SetConfig(appConfig)
 	logging.SetConfig(appConfig)
@@ -51,11 +52,6 @@ func main() {
 		TestKeys: *testKeys,
 		Workers:  *workers,
 		APIKeys:  apiKeys,
-	}
-
-	urlMap, err := worker.LoadMappings()
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	if len(os.Args) < 1 {
@@ -86,9 +82,9 @@ func main() {
 
 	switch len(steamIDs) {
 	case 1:
-		worker.CrawlOneUser(steamIDs[0], urlMap, cntr, config)
+		worker.CrawlOneUser(steamIDs[0], appConfig.UrlMap, cntr, config)
 	case 2:
-		worker.CrawlTwoUsers(steamIDs[0], steamIDs[1], urlMap, cntr, config)
+		worker.CrawlTwoUsers(steamIDs[0], steamIDs[1], appConfig.UrlMap, cntr, config)
 	}
 
 }

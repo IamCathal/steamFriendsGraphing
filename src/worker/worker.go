@@ -24,9 +24,10 @@ import (
 // JobsStruct is the strcuture used for placing jobs onto the
 // worker queue
 type JobsStruct struct {
-	Level   int
-	SteamID string
-	APIKey  string
+	Level                     int
+	OriginalTargetUserSteamID string
+	CurrentTargetSteamID      string
+	APIKey                    string
 }
 
 // WorkerConfig holds most of the configuration needed
@@ -119,7 +120,7 @@ func Worker(cntr util.ControllerInterface, jobs <-chan JobsStruct, results chan<
 
 		// Temporary fix, sometimes level 0s get put onto jobs queue
 		if job.Level != 0 {
-			friendsObj, err := GetFriends(cntr, job.SteamID, job.APIKey, cfg.LevelCap, jobs)
+			friendsObj, err := GetFriends(cntr, job, cfg.LevelCap, jobs)
 			util.CheckErr(err)
 
 			numFriends := len(friendsObj.FriendsList.Friends)
@@ -128,8 +129,9 @@ func Worker(cntr util.ControllerInterface, jobs <-chan JobsStruct, results chan<
 			// their level is within our range
 			for i := 0; i < numFriends; i++ {
 				indivFriends := JobsStruct{
-					Level:   job.Level + 1,
-					SteamID: friendsObj.FriendsList.Friends[i].Steamid,
+					OriginalTargetUserSteamID: job.OriginalTargetUserSteamID,
+					Level:                     job.Level + 1,
+					CurrentTargetSteamID:      friendsObj.FriendsList.Friends[i].Steamid,
 				}
 
 				// If their level is within range, we'll scrape them in the future
@@ -153,17 +155,17 @@ func Worker(cntr util.ControllerInterface, jobs <-chan JobsStruct, results chan<
 }
 
 // GetFriends returns the list of friends for a given user and caches results if requested
-func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int, jobs <-chan JobsStruct) (util.FriendsStruct, error) {
+func GetFriends(cntr util.ControllerInterface, job JobsStruct, level int, jobs <-chan JobsStruct) (util.FriendsStruct, error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 
-	exists, err := CacheFileExists(cntr, steamID)
+	exists, err := CacheFileExists(cntr, job.CurrentTargetSteamID)
 	if exists {
 		if !appConfig.IgnoreCache {
-			friendsObj, err := GetCache(cntr, steamID)
+			friendsObj, err := GetCache(cntr, job.CurrentTargetSteamID)
 			if err != nil {
 				return util.FriendsStruct{}, err
 			}
-			LogCall(cntr, "GET", steamID, friendsObj.Username, "200", util.Green, startTime)
+			LogCall(cntr, "GET", job, friendsObj.Username, "200", util.Green, startTime)
 			return friendsObj, nil
 		}
 	}
@@ -172,13 +174,13 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 	}
 
 	// Check to see if the steamID is in the valid format now to save time
-	if valid := util.IsValidFormatSteamID(steamID); !valid {
-		LogCall(cntr, "GET", steamID, "Invalid SteamID", "400", util.Red, startTime)
-		return util.FriendsStruct{}, util.MakeErr(fmt.Errorf("invalid steamID: %s, apikey: %s", steamID, apiKey))
+	if valid := util.IsValidFormatSteamID(job.CurrentTargetSteamID); !valid {
+		LogCall(cntr, "GET", job, "Invalid SteamID", "400", util.Red, startTime)
+		return util.FriendsStruct{}, util.MakeErr(fmt.Errorf("invalid steamID: %s, apikey: %s", job.CurrentTargetSteamID, job.APIKey))
 	}
-	friendsObj, err := cntr.CallGetFriendsListAPI(url.QueryEscape(steamID), url.QueryEscape(apiKey))
+	friendsObj, err := cntr.CallGetFriendsListAPI(url.QueryEscape(job.CurrentTargetSteamID), url.QueryEscape(job.APIKey))
 	if err != nil {
-		LogCall(cntr, "GET", steamID, friendsObj.Username, "400", util.Red, startTime)
+		LogCall(cntr, "GET", job, friendsObj.Username, "400", util.Red, startTime)
 		return util.FriendsStruct{}, err
 	}
 
@@ -199,7 +201,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 			}
 		}
 		steamIDsList += ""
-		userStatsObj, err := cntr.CallPlayerSummaryAPI(steamIDsList, apiKey)
+		userStatsObj, err := cntr.CallPlayerSummaryAPI(steamIDsList, job.APIKey)
 		if err != nil {
 			var temp util.FriendsStruct
 			return temp, util.MakeErr(err)
@@ -235,7 +237,7 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 				}
 			}
 
-			userStatsObj, err := cntr.CallPlayerSummaryAPI(steamIDsList, apiKey)
+			userStatsObj, err := cntr.CallPlayerSummaryAPI(steamIDsList, job.APIKey)
 			if err != nil {
 				var temp util.FriendsStruct
 				return temp, util.MakeErr(err)
@@ -261,14 +263,14 @@ func GetFriends(cntr util.ControllerInterface, steamID, apiKey string, level int
 		}
 	}
 
-	username, err := util.GetUsername(cntr, apiKey, steamID)
+	username, err := util.GetUsername(cntr, job.APIKey, job.CurrentTargetSteamID)
 	if err != nil {
 		return friendsObj, util.MakeErr(err)
 	}
 	friendsObj.Username = username
-	WriteToFile(cntr, apiKey, steamID, friendsObj)
+	WriteToFile(cntr, job.APIKey, job.CurrentTargetSteamID, friendsObj)
 	// log the request along the round trip delay
-	LogCall(cntr, fmt.Sprintf("GET [%d][%d]", level, len(jobs)), steamID, friendsObj.Username, "200", util.Green, startTime)
+	LogCall(cntr, fmt.Sprintf("GET [%d][%d]", level, len(jobs)), job, friendsObj.Username, "200", util.Green, startTime)
 	return friendsObj, nil
 }
 
@@ -302,9 +304,10 @@ func ControlFunc(cntr util.ControllerInterface, apiKeys []string, steamID string
 	}
 
 	tempStruct := JobsStruct{
-		Level:   1,
-		SteamID: steamID,
-		APIKey:  apiKeys[0],
+		OriginalTargetUserSteamID: steamID,
+		Level:                     1,
+		CurrentTargetSteamID:      steamID,
+		APIKey:                    apiKeys[0],
 	}
 
 	workConfig.Wg.Add(1)
@@ -328,9 +331,10 @@ func ControlFunc(cntr util.ControllerInterface, apiKeys []string, steamID string
 			reachableFriends++
 
 			newJob := JobsStruct{
-				Level:   result.Level,
-				SteamID: result.SteamID,
-				APIKey:  apiKeys[i%len(apiKeys)],
+				OriginalTargetUserSteamID: steamID,
+				Level:                     result.Level,
+				CurrentTargetSteamID:      result.CurrentTargetSteamID,
+				APIKey:                    apiKeys[i%len(apiKeys)],
 			}
 			workConfig.Wg.Add(1)
 			jobs <- newJob
@@ -356,13 +360,14 @@ func Divmod(numerator, denominator int) (quotient, remainder int) {
 }
 
 // LogCall logs a call to the API with various stats on the request
-func LogCall(cntr util.ControllerInterface, method, steamID, username, status, statusColor string, startTime int64) {
+func LogCall(cntr util.ControllerInterface, method string, job JobsStruct, username, status, statusColor string, startTime int64) {
 	endTime := time.Now().UnixNano() / int64(time.Millisecond)
 	delay := strconv.FormatInt((endTime - startTime), 10)
 
-	logMsg := fmt.Sprintf("%s [%s] %s %s%s%s %vms\n", method, steamID, username,
+	logMsg := fmt.Sprintf("%s [%s] %s %s%s%s %vms\n", method, job.CurrentTargetSteamID, username,
 		statusColor, status, "\033[0m", delay)
-	logging.SpecialLog(cntr, logMsg)
+	fmt.Println(appConfig.UrlMap[job.OriginalTargetUserSteamID])
+	logging.SpecialLog(cntr, appConfig.UrlMap[job.OriginalTargetUserSteamID], logMsg)
 	fmt.Printf("%s", logMsg)
 }
 

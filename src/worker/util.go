@@ -1,15 +1,12 @@
 package worker
 
 import (
-	"errors"
-	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/segmentio/ksuid"
-	"github.com/steamFriendsGraphing/util"
+	"github.com/steamFriendsGraphing/configuration"
 )
 
 // IsEnvVarSet does a simple check to see if an environment
@@ -19,57 +16,6 @@ func IsEnvVarSet(envvar string) bool {
 		return true
 	}
 	return false
-}
-
-func LoadMappings() (map[string]string, error) {
-	urlMapLocation := appConfig.UrlMappingsLocation
-	if urlMapLocation == "" {
-		return nil, util.MakeErr(errors.New("appConfig.UrlMappingsLocation was not initialised before attempting to load url mappings"))
-		// util.ThrowErr(errors.New("appConfig.UrlMappingsLocation was not initialised before attempting to load url mappings"))
-	}
-	urlMap := make(map[string]string)
-	byteContent, err := ioutil.ReadFile(urlMapLocation)
-	if err != nil {
-		return nil, util.MakeErr(err)
-	}
-	stringContent := string(byteContent)
-
-	if len(stringContent) > 0 {
-		lines := strings.Split(stringContent, "\n")
-
-		for _, line := range lines {
-			splitArr := strings.Split(line, ":")
-			// Last line is just \n
-			if len(splitArr) == 2 {
-				urlMap[splitArr[0]] = splitArr[1]
-			}
-		}
-		return urlMap, nil
-
-	} else {
-		return make(map[string]string), nil
-	}
-}
-
-func writeMappings(urlMap map[string]string) error {
-	urlMapLocation := appConfig.UrlMappingsLocation
-	if urlMapLocation == "" {
-		return util.MakeErr(errors.New("appConfig.UrlMappingsLocation was not initialised before attempting to write url mappings"))
-		// util.ThrowErr(errors.New("appConfig.UrlMappingsLocation was not initialised before attempting to write url mappings"))
-	}
-	file, err := os.OpenFile(urlMapLocation, os.O_RDWR, 0755)
-	if err != nil {
-		return util.MakeErr(err)
-	}
-	defer file.Close()
-	file.Seek(0, 0)
-	for key, _ := range urlMap {
-		_, err = file.WriteString(fmt.Sprintf("%s:%s\n", key, urlMap[key]))
-		if err != nil {
-			return util.MakeErr(err)
-		}
-	}
-	return nil
 }
 
 func sortSteamIDs(steamIDs []string) ([]string, error) {
@@ -108,5 +54,5 @@ func getSteamIDsIdentifier(steamIDs []string, urlMap map[string]string) (string,
 func GenerateURL(input string, urlMap map[string]string) {
 	identifier := ksuid.New()
 	urlMap[input] = identifier.String()
-	writeMappings(urlMap)
+	configuration.WriteMappings(appConfig, urlMap)
 }

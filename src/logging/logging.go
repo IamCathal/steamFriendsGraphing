@@ -33,7 +33,7 @@ func CheckErr(err error) {
 }
 
 // SpecialLog logs to file using logrus
-func SpecialLog(cntr util.ControllerInterface, msg string) error {
+func SpecialLog(cntr util.ControllerInterface, logFileName, msg string) error {
 	logsFolder := appConfig.LogsFolderLocation
 	if logsFolder == "" {
 		return util.MakeErr(errors.New("appConfig.LogsFolderLocation was not initialised before attempting to write to file"))
@@ -41,7 +41,8 @@ func SpecialLog(cntr util.ControllerInterface, msg string) error {
 	}
 
 	logg.SetFormatter(&logg.JSONFormatter{})
-	file, err := cntr.OpenFile(fmt.Sprintf("%s/%s.txt", logsFolder, os.Getenv("CURRTARGET")), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0755)
+	file, err := cntr.OpenFile(fmt.Sprintf("%s/%s.txt", logsFolder, logFileName), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0755)
+	fmt.Printf("Writing to: %s", fmt.Sprintf("%s/%s.txt", logsFolder, logFileName))
 	CheckErr(err)
 
 	logg.SetOutput(file)
