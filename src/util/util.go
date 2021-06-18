@@ -128,7 +128,10 @@ func IsValidResponseForAPIKey(body string) bool {
 // calling the Steam web API with each key
 func CheckAPIKeys(cntr ControllerInterface, apiKeys []string) error {
 	for i, apiKey := range apiKeys {
-		response := cntr.CallIsAPIKeyValidAPI(apiKey)
+		response, err := cntr.CallIsAPIKeyValidAPI(apiKey)
+		if err != nil {
+			return err
+		}
 
 		// Wouldn't want to log API keys to console if using
 		// the github actions testing environment

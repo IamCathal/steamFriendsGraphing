@@ -73,7 +73,7 @@ func TestGetPlayerSummaryWithInvalidAPIResponse(t *testing.T) {
 func TestCheckAPIKeys(t *testing.T) {
 	mockController := &MockControllerInterface{}
 
-	mockController.On("CallIsAPIKeyValidAPI", mock.AnythingOfType("string")).Return("valid response")
+	mockController.On("CallIsAPIKeyValidAPI", mock.AnythingOfType("string")).Return("valid response", nil)
 	mockController.On("IsValidResponseForAPIKey", mock.AnythingOfType("string")).Return(true)
 
 	apiKeysToBeChecked := []string{

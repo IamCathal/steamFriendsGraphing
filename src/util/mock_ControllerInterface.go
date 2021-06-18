@@ -35,7 +35,7 @@ func (_m *MockControllerInterface) CallGetFriendsListAPI(steamID string, apiKey 
 }
 
 // CallIsAPIKeyValidAPI provides a mock function with given fields: apiKeys
-func (_m *MockControllerInterface) CallIsAPIKeyValidAPI(apiKeys string) string {
+func (_m *MockControllerInterface) CallIsAPIKeyValidAPI(apiKeys string) (string, error) {
 	ret := _m.Called(apiKeys)
 
 	var r0 string
@@ -45,7 +45,14 @@ func (_m *MockControllerInterface) CallIsAPIKeyValidAPI(apiKeys string) string {
 		r0 = ret.Get(0).(string)
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(apiKeys)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // CallPlayerSummaryAPI provides a mock function with given fields: steamID, apiKey
