@@ -17,6 +17,7 @@ var (
 	appConfig configuration.Info
 )
 
+// SetConfig sets the app config for all functions in the logging module
 func SetConfig(config configuration.Info) {
 	appConfig = config
 }
@@ -31,16 +32,20 @@ func CheckErr(err error) {
 	}
 }
 
-func SpecialLog(cntr util.ControllerInterface, msg string) {
+// SpecialLog logs to file using logrus
+func SpecialLog(cntr util.ControllerInterface, logFileName, msg string) error {
 	logsFolder := appConfig.LogsFolderLocation
 	if logsFolder == "" {
-		util.ThrowErr(errors.New("config.LogsFolderLocation was not initialised before attempting to write to file"))
+		return util.MakeErr(errors.New("appConfig.LogsFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	logg.SetFormatter(&logg.JSONFormatter{})
-	file, err := cntr.OpenFile(fmt.Sprintf("%s/%s.txt", logsFolder, os.Getenv("CURRTARGET")), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0755)
-	CheckErr(err)
+	file, err := cntr.OpenFile(fmt.Sprintf("%s/%s.txt", logsFolder, logFileName), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0755)
+	if err != nil {
+		return util.MakeErr(err)
+	}
 
 	logg.SetOutput(file)
 	logg.WithFields(logg.Fields{}).Info(msg)
+	return nil
 }

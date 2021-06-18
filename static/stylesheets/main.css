@@ -1,0 +1,88 @@
+body {
+  min-height: 100vh;
+  display: flex;
+  background-color: #24292d;
+  flex-direction: column;
+  background-image: url('https://cathaloc.dev/images/backgroundDarkMode.jpg');
+}
+
+p, a, input[type="text"] {
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: white;
+}
+
+input[type="text"] {
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: black;
+}
+
+.shadowText {
+  text-shadow: 0px 0px 4px #141314;
+}
+
+
+.bt {
+  padding: 10px 5px 10px 5px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  -webkit-backdrop-filter: blur(10px);
+  /* Safari 9+ */
+  backdrop-filter: blur(5px);
+  /* Chrome and Opera */
+  border-radius: 8px;
+  background-color: rgba(51, 51, 51, 0.3);
+}
+
+.svgBlur {
+  filter: drop-shadow(3px 0 3px rgba(0, 0, 0, 0.2));
+}
+
+.hugeText {
+  font-weight: 700;
+}
+
+/* .col {
+  border: 2px solid orange;
+}
+
+.row {
+  border: 2px solid gren;
+} */
+
+.steamIDInputBox {
+  padding: 4px 8px;
+  border: 2px solid rgb(48, 48, 48);
+  border-radius: 8px;
+  font-size: 30px;
+}
+
+.crawlSubmitButton {
+  box-shadow: 0 8px 12px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  border: none;
+  border-radius: 3px;
+  padding: 8px 16px; 
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+}
+
+.box {
+  border-radius: 4px;
+}
+
+/* Graphing stuff */
+
+.item {
+  margin: auto;
+}
+
+.graphContainer {
+  margin-top:30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  background-color: white;
+}
+
+.blackLogo {
+  filter: invert(100);
+}
