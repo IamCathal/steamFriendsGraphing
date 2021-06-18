@@ -37,12 +37,13 @@ func SpecialLog(cntr util.ControllerInterface, logFileName, msg string) error {
 	logsFolder := appConfig.LogsFolderLocation
 	if logsFolder == "" {
 		return util.MakeErr(errors.New("appConfig.LogsFolderLocation was not initialised before attempting to write to file"))
-		// util.ThrowErr(errors.New("appConfig.LogsFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	logg.SetFormatter(&logg.JSONFormatter{})
 	file, err := cntr.OpenFile(fmt.Sprintf("%s/%s.txt", logsFolder, logFileName), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0755)
-	CheckErr(err)
+	if err != nil {
+		return util.MakeErr(err)
+	}
 
 	logg.SetOutput(file)
 	logg.WithFields(logg.Fields{}).Info(msg)
