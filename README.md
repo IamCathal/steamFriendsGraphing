@@ -12,14 +12,15 @@
 ![example workflow name](https://github.com/IamCathal/steamFriendsGraphing/workflows/Go/badge.svg) ![go report card badge](https://goreportcard.com/badge/github.com/iamcathal/steamfriendsgraphing)
 
 ## What's the goal of this project? 
-The goal of this project is to determine the degrees of seperation between any two users on [Steam](https://store.steampowered.com/)
+Determine the degrees of seperation between any two users on [Steam](https://store.steampowered.com/). This is done through crawling a users friend list and creating a graph representation of it.
+
 
 ## What is a degree of seperation?
 *"Six degrees of separation is the idea that all people are six, or fewer, social connections away from each other. Also known as the 6 Handshakes rule. As a result, a chain of "a friend of a friend" statements can be made to connect any two people in a maximum of six steps."* - [Wikipedia](https://en.wikipedia.org/wiki/Six_degrees_of_separation)
 
 ## How does the program work?
 
-The application can be split into two clear halves. One half does the crawling to gather the information needed and the other compiles this data into a graph format.
+The application can be split into two clear halves. One half does the crawling to gather the information needed and the other compiles this data into a graph format. A single user can be crawled to just map the friend network for one target user or two users can be chosen to attempt to find a degree of seperation between them.
 
 ### Crawling
 Without utilizing some form of concurrency crawling would take forever. Since the application has a lot of downtime in waiting for API calls to return and it's not too CPU intensive overall using concurrency to process multiple users at once is key. The current implementation uses a [worker pool](https://gobyexample.com/worker-pools). 
@@ -42,7 +43,9 @@ A worker pool allows the application to place jobs into a pool where workers can
 
 
 ### Graphing
-Graphing functionality is in the pipeline.
+The graphing functionality can be split into two sections:
+* Create the graph output seen by the user using [go-echarts](https://github.com/go-echarts/go-echarts)
+* Find the degree of seperation between two users if possible using [dijkstra](https://github.com/IamCathal/dijkstra2)
 
 ## Installation
 After cloning the repo you are going to need to get your [Steam Web API key](https://partner.steamgames.com/doc/webapi_overview/auth) and create a file called `APIKEYS.txt` and place it into the root directory.
