@@ -71,11 +71,3 @@ func TestStatLookupWithExpectedUserStats(t *testing.T) {
 
 	assert.Equal(t, expectedUserStats, resStruct)
 }
-
-func TestCrawl(t *testing.T) {
-	reqBody := "level=3&testkeys=false&workers=4&steamID0=testSteamID&statmode=true"
-	urlVals, _ := url.ParseQuery(reqBody)
-
-	assert.HTTPStatusCode(t, crawl, "POST", "/crawl", urlVals, 200)
-	assert.HTTPBodyContains(t, crawl, "POST", "/crawl", urlVals, "Your finished graph will be saved under")
-}

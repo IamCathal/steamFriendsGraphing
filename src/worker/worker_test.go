@@ -19,12 +19,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	appConfig = configuration.InitConfig("testing")
+	appConfig = configuration.InitConfig("testing", false)
 	// Initialise config for all packages that interact
 	// with either log or cache files
 	util.SetConfig(appConfig)
 	SetConfig(appConfig)
 	logging.SetConfig(appConfig)
+	util.SetConfig(appConfig)
 
 	code := m.Run()
 
@@ -152,7 +153,12 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 		},
 	}
 
-	os.Setenv("CURRTARGET", testCase.steamID)
+	firstJob := JobsStruct{
+		OriginalTargetUserSteamID: originalUserSteamID,
+		CurrentTargetSteamID:      testCase.steamID,
+		Level:                     1,
+		APIKey:                    testCase.apikey,
+	}
 
 	// A real file pointer must be used. Creating a nil pointer os.File
 	// results in an ErrInvalid when closed
@@ -163,7 +169,7 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 	mockController.On("CreateFile", mock.AnythingOfType("string")).Return(dummyFile, nil)
 	mockController.On("WriteGzip", mock.AnythingOfType("*os.File"), mock.AnythingOfType("string")).Return(nil)
 
-	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, testCase.steamID)
+	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, appConfig.UrlMap[testCase.steamID])
 	tempLogFile, err := os.Create(expectedLogsFile)
 	if err != nil {
 		t.Error(err)
@@ -179,7 +185,7 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 	// Used to get the username of the current target user
 	mockController.On("CallPlayerSummary", originalUserSteamID, mock.AnythingOfType("string")).Return(friendsUsernamesForOriginalUser, nil)
 
-	friends, err := GetFriends(mockController, testCase.steamID, testCase.apikey, 1, jobs)
+	friends, err := GetFriends(mockController, firstJob, 1, jobs)
 
 	assert.Nil(t, err)
 	assert.Equal(t, friendsUsernamesForOriginalUser.FriendsList, friends.FriendsList)
@@ -204,13 +210,20 @@ func TestGetFriendsWithInvalidGetFriendsAPICallWhenRetrievingTargetUsersFriends(
 		false,
 	}
 
+	firstJob := JobsStruct{
+		OriginalTargetUserSteamID: originalUserSteamID,
+		CurrentTargetSteamID:      testCase.steamID,
+		Level:                     1,
+		APIKey:                    testCase.apikey,
+	}
+
 	// Create a folder to hold the logfile generated
 	os.Mkdir(appConfig.LogsFolderLocation, 0755)
 
 	os.Setenv("CURRTARGET", testCase.steamID)
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
 
-	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, testCase.steamID)
+	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, appConfig.UrlMap[testCase.steamID])
 	tempLogFile, err := os.Create(expectedLogsFile)
 	if err != nil {
 		t.Error(err)
@@ -221,7 +234,7 @@ func TestGetFriendsWithInvalidGetFriendsAPICallWhenRetrievingTargetUsersFriends(
 	getFriendsListAPIError := errors.New("error")
 	mockController.On("CallGetFriendsListAPI", originalUserSteamID, mock.AnythingOfType("string")).Return(util.FriendsStruct{}, getFriendsListAPIError)
 
-	friends, err := GetFriends(mockController, testCase.steamID, testCase.apikey, 1, jobs)
+	friends, err := GetFriends(mockController, firstJob, 1, jobs)
 
 	assert.Empty(t, friends)
 	assert.EqualError(t, err, getFriendsListAPIError.Error())
@@ -246,10 +259,17 @@ func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
 		false,
 	}
 
+	firstJob := JobsStruct{
+		OriginalTargetUserSteamID: originalUserSteamID,
+		CurrentTargetSteamID:      testCase.steamID,
+		Level:                     1,
+		APIKey:                    testCase.apikey,
+	}
+
 	// Create a folder to hold the logfile generated
 	os.Mkdir(appConfig.LogsFolderLocation, 0755)
 
-	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, testCase.steamID)
+	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, appConfig.UrlMap[testCase.steamID])
 	tempLogFile, err := os.Create(expectedLogsFile)
 	if err != nil {
 		t.Error(err)
@@ -261,7 +281,7 @@ func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
 	expectedError := errors.New(fmt.Sprintf("invalid steamID: %s, apikey: %s", testCase.steamID, testCase.apikey))
 
-	friends, err := GetFriends(mockController, testCase.steamID, testCase.apikey, 1, jobs)
+	friends, err := GetFriends(mockController, firstJob, 1, jobs)
 
 	assert.Empty(t, friends)
 	assert.Contains(t, err.Error(), expectedError.Error())

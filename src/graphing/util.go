@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/go-echarts/go-echarts/charts"
+	"github.com/steamFriendsGraphing/util"
 )
 
 // IndivFriend holds profile information for
@@ -74,15 +76,15 @@ type infoStruct struct {
 // GetCache gets a user's cached records if it exists
 func GetCache(steamID string) (FriendsStruct, error) {
 	var temp FriendsStruct
-	cacheFolder := "userData"
-	if exists := IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
+	cacheFolderLocation := appConfig.CacheFolderLocation
+	if cacheFolderLocation == "" {
+		return temp, util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write graph to file"))
 	}
-	file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
-	defer file.Close()
+	file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolderLocation, steamID))
 	if err != nil {
-		log.Fatal(err)
+		return FriendsStruct{}, util.MakeErr(err)
 	}
+	defer file.Close()
 
 	gz, _ := gzip.NewReader(file)
 	defer gz.Close()
@@ -108,11 +110,11 @@ func IsEnvVarSet(envvar string) bool {
 // e.g 76561198063271448 -> moose
 func GetUsernameFromCacheFile(steamID string) (string, error) {
 	var temp FriendsStruct
-	cacheFolder := "userData"
-	if exists := IsEnvVarSet("testing"); exists {
-		cacheFolder = "testData"
+	cacheFolderLocation := appConfig.CacheFolderLocation
+	if cacheFolderLocation == "" {
+		return "", util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to get username from cache file"))
 	}
-	file, err := os.Open(fmt.Sprintf("../%s/%s.gz", cacheFolder, steamID))
+	file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolderLocation, steamID))
 	defer file.Close()
 	if err != nil {
 		return "", err
@@ -150,13 +152,17 @@ func NodeExistsInt(ID int, nodeMap map[int]bool) bool {
 // CreateUserDataFolder creates a folder for holding cache.
 // Can either be userData for regular use or testData when running under github actions.
 func CreateFinishedGraphFolder() error {
-	_, err := os.Stat(fmt.Sprintf("%s/../../finishedGraphs", os.Getenv("BWD")))
+	finishedGraphsLocation := appConfig.FinishedGraphsLocation
+	if finishedGraphsLocation == "" {
+		return util.MakeErr(errors.New("appConfig.finishedGraphsLocation was not initialised before attempting to create finished graphs folder"))
+	}
+	_, err := os.Stat(finishedGraphsLocation)
 	if os.IsNotExist(err) {
-		os.Mkdir(fmt.Sprintf("%s/../../finishedGraphs", os.Getenv("BWD")), 0755)
+		os.Mkdir(finishedGraphsLocation, 0755)
 		return nil
 	}
 	if err != nil {
-		return err
+		return util.MakeErr(err)
 	}
 	return nil
 }

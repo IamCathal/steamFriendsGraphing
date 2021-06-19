@@ -69,7 +69,8 @@ func GetUserDetails(cntr ControllerInterface, apiKey, steamID string) (Player, e
 func CreateUserDataFolder() error {
 	cacheFolder := appConfig.CacheFolderLocation
 	if cacheFolder == "" {
-		ThrowErr(errors.New("config.CacheFolderLocation was not initialised before attempting to write to file"))
+		return MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
+		// ThrowErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	if _, err := os.Stat(cacheFolder); os.IsNotExist(err) {
@@ -125,9 +126,12 @@ func IsValidResponseForAPIKey(body string) bool {
 
 // CheckAPIKeys checks if a given list of API keys is valid by
 // calling the Steam web API with each key
-func CheckAPIKeys(cntr ControllerInterface, apiKeys []string) {
+func CheckAPIKeys(cntr ControllerInterface, apiKeys []string) error {
 	for i, apiKey := range apiKeys {
-		response := cntr.CallIsAPIKeyValidAPI(apiKey)
+		response, err := cntr.CallIsAPIKeyValidAPI(apiKey)
+		if err != nil {
+			return err
+		}
 
 		// Wouldn't want to log API keys to console if using
 		// the github actions testing environment
@@ -137,12 +141,13 @@ func CheckAPIKeys(cntr ControllerInterface, apiKeys []string) {
 		fmt.Printf("[%d] Testing %s ...", i, apiKey)
 
 		if valid := IsValidResponseForAPIKey(response); !valid {
-			ThrowErr(fmt.Errorf("invalid api key %s", apiKey))
+			return MakeErr(fmt.Errorf("invalid api key %s", apiKey))
 		}
 
 		fmt.Printf("\r[%d] Testing %s ... %svalid!%s\n", i, apiKey, Green, White)
 	}
 	fmt.Printf("All API keys are valid!\n")
+	return nil
 }
 
 // IsEnvVarSet checks if a specified environment variable is set

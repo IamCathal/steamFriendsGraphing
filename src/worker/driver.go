@@ -2,7 +2,6 @@ package worker
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/go-echarts/go-echarts/charts"
@@ -10,7 +9,8 @@ import (
 	"github.com/steamFriendsGraphing/util"
 )
 
-func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.ControllerInterface, config CrawlerConfig) {
+// CrawlOneUser crawls a single user and generates a graph the specified users friend network
+func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.ControllerInterface, config CrawlerConfig) error {
 	finishedGraphLocation := ""
 	os.Setenv("CURRTARGET", steamID)
 
@@ -18,20 +18,28 @@ func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.Contro
 		GenerateURL(steamID, urlMapping)
 
 		InitCrawling(cntr, config, steamID)
-		gData := graphing.InitGraphing(config.Level, config.Workers, steamID)
+		gData, err := graphing.InitGraphing(config.Level, config.Workers, steamID)
+		if err != nil {
+			return err
+		}
 
 		finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamID])
-		gData.Render(finishedGraphLocation)
+		err = gData.Render(finishedGraphLocation)
+		if err != nil {
+			return err
+		}
 	}
 
 	finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamID])
 	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
+	return nil
 }
 
-func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr util.ControllerInterface, config CrawlerConfig) {
+// CrawlOneUser crawls two users and generates a unified graph of their friend networks if possible
+func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr util.ControllerInterface, config CrawlerConfig) error {
 	steamIDsIdentifier, err := getSteamIDsIdentifier([]string{steamID1, steamID2}, urlMapping)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	finishedGraphLocation := ""
 
@@ -39,14 +47,17 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 		GenerateURL(steamIDsIdentifier, urlMapping)
 		finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
 
-		os.Setenv("CURRTARGET", steamID1)
 		InitCrawling(cntr, config, steamID1)
-
-		os.Setenv("CURRTARGET", steamID2)
 		InitCrawling(cntr, config, steamID2)
 
-		StartUserGraphData := graphing.InitGraphing(config.Level, config.Workers, steamID1)
-		EndUserGraphData := graphing.InitGraphing(config.Level, config.Workers, steamID2)
+		StartUserGraphData, err := graphing.InitGraphing(config.Level, config.Workers, steamID1)
+		if err != nil {
+			return err
+		}
+		EndUserGraphData, err := graphing.InitGraphing(config.Level, config.Workers, steamID2)
+		if err != nil {
+			return err
+		}
 
 		graph := charts.NewGraph()
 		allNodes := graphing.MergeNodes(StartUserGraphData.Nodes, EndUserGraphData.Nodes)
@@ -98,4 +109,5 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 
 	finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
 	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
+	return nil
 }

@@ -17,7 +17,7 @@ type Controller struct{}
 // filesystems
 type ControllerInterface interface {
 	CallPlayerSummaryAPI(steamID, apiKey string) (UserStatsStruct, error)
-	CallIsAPIKeyValidAPI(apiKeys string) string
+	CallIsAPIKeyValidAPI(apiKeys string) (string, error)
 	CallGetFriendsListAPI(steamID, apiKey string) (FriendsStruct, error)
 
 	FileExists(steamID string) bool
@@ -44,16 +44,20 @@ func (control Controller) CallPlayerSummaryAPI(steamID, apiKey string) (UserStat
 
 // CallIsAPIKeyValidAPI calls the Steam web API and it's response is used to
 // determine if the specified API key is valid
-func (control Controller) CallIsAPIKeyValidAPI(apiKey string) string {
+func (control Controller) CallIsAPIKeyValidAPI(apiKey string) (string, error) {
 	targetURL := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=%s&steamid=76561198282036055&relationship=friend", url.QueryEscape(apiKey))
 	res, err := http.Get(targetURL)
-	CheckErr(err)
+	if err != nil {
+		return "", MakeErr(err)
+	}
 
 	body, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
-	CheckErr(err)
+	if err != nil {
+		return "", MakeErr(err)
+	}
 
-	return string(body)
+	return string(body), nil
 }
 
 // CallGetFriendsListAPI calls the Steam GetFriendList API endpoint and returns the response in
@@ -132,7 +136,5 @@ func (controller Controller) WriteGzip(file *os.File, content string) error {
 	w := gzip.NewWriter(file)
 	_, err := w.Write([]byte(content))
 	defer w.Close()
-
-	fmt.Println("controllerIntercace.WriteGzip: Error writing gzip")
 	return err
 }
