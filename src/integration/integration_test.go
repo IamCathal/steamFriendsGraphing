@@ -39,7 +39,7 @@ func getAPIKeysForTesting() []string {
 
 func TestMain(m *testing.M) {
 	// Setup apikeys and config or all tests
-	configuration.InitAndSetConfig("testing", false)
+	configuration.InitAndSetConfig("testing", false, false)
 	apiKeys = getAPIKeysForTesting()
 
 	// Create test directories for logs and data
