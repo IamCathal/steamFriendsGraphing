@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/go-echarts/go-echarts/charts"
+	"github.com/steamFriendsGraphing/configuration"
 	"github.com/steamFriendsGraphing/util"
 )
 
@@ -76,9 +77,9 @@ type infoStruct struct {
 // GetCache gets a user's cached records if it exists
 func GetCache(steamID string) (FriendsStruct, error) {
 	var temp FriendsStruct
-	cacheFolderLocation := appConfig.CacheFolderLocation
+	cacheFolderLocation := configuration.AppConfig.CacheFolderLocation
 	if cacheFolderLocation == "" {
-		return temp, util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write graph to file"))
+		return temp, util.MakeErr(errors.New("configuration.AppConfig.CacheFolderLocation was not initialised before attempting to write graph to file"))
 	}
 	file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolderLocation, steamID))
 	if err != nil {
@@ -110,9 +111,9 @@ func IsEnvVarSet(envvar string) bool {
 // e.g 76561198063271448 -> moose
 func GetUsernameFromCacheFile(steamID string) (string, error) {
 	var temp FriendsStruct
-	cacheFolderLocation := appConfig.CacheFolderLocation
+	cacheFolderLocation := configuration.AppConfig.CacheFolderLocation
 	if cacheFolderLocation == "" {
-		return "", util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to get username from cache file"))
+		return "", util.MakeErr(errors.New("configuration.AppConfig.CacheFolderLocation was not initialised before attempting to get username from cache file"))
 	}
 	file, err := os.Open(fmt.Sprintf("%s/%s.gz", cacheFolderLocation, steamID))
 	defer file.Close()
@@ -152,9 +153,9 @@ func NodeExistsInt(ID int, nodeMap map[int]bool) bool {
 // CreateUserDataFolder creates a folder for holding cache.
 // Can either be userData for regular use or testData when running under github actions.
 func CreateFinishedGraphFolder() error {
-	finishedGraphsLocation := appConfig.FinishedGraphsLocation
+	finishedGraphsLocation := configuration.AppConfig.FinishedGraphsLocation
 	if finishedGraphsLocation == "" {
-		return util.MakeErr(errors.New("appConfig.finishedGraphsLocation was not initialised before attempting to create finished graphs folder"))
+		return util.MakeErr(errors.New("configuration.AppConfig.finishedGraphsLocation was not initialised before attempting to create finished graphs folder"))
 	}
 	_, err := os.Stat(finishedGraphsLocation)
 	if os.IsNotExist(err) {

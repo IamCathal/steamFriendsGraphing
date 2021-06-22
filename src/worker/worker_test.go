@@ -12,20 +12,13 @@ import (
 	"testing"
 
 	"github.com/steamFriendsGraphing/configuration"
-	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestMain(m *testing.M) {
-	appConfig = configuration.InitConfig("testing", false)
-	// Initialise config for all packages that interact
-	// with either log or cache files
-	util.SetConfig(appConfig)
-	SetConfig(appConfig)
-	logging.SetConfig(appConfig)
-	util.SetConfig(appConfig)
+	configuration.InitAndSetConfig("testing", false)
 
 	code := m.Run()
 
@@ -87,7 +80,7 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 	frenchToastFriendsSince := 8
 
 	// Create a folder to hold the logfile generated
-	os.Mkdir(appConfig.LogsFolderLocation, 0755)
+	os.Mkdir(configuration.AppConfig.LogsFolderLocation, 0755)
 
 	apiKeys := []string{"apiKey1", "apiKey2"}
 	jobs := make(chan JobsStruct, 100)
@@ -169,7 +162,7 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 	mockController.On("CreateFile", mock.AnythingOfType("string")).Return(dummyFile, nil)
 	mockController.On("WriteGzip", mock.AnythingOfType("*os.File"), mock.AnythingOfType("string")).Return(nil)
 
-	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, appConfig.UrlMap[testCase.steamID])
+	expectedLogsFile := fmt.Sprintf("%s/%s.txt", configuration.AppConfig.LogsFolderLocation, configuration.AppConfig.UrlMap[testCase.steamID])
 	tempLogFile, err := os.Create(expectedLogsFile)
 	if err != nil {
 		t.Error(err)
@@ -190,7 +183,7 @@ func TestGetFriendsWithValidInformation(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, friendsUsernamesForOriginalUser.FriendsList, friends.FriendsList)
 
-	os.RemoveAll(appConfig.LogsFolderLocation)
+	os.RemoveAll(configuration.AppConfig.LogsFolderLocation)
 }
 
 func TestGetFriendsWithInvalidGetFriendsAPICallWhenRetrievingTargetUsersFriends(t *testing.T) {
@@ -218,12 +211,12 @@ func TestGetFriendsWithInvalidGetFriendsAPICallWhenRetrievingTargetUsersFriends(
 	}
 
 	// Create a folder to hold the logfile generated
-	os.Mkdir(appConfig.LogsFolderLocation, 0755)
+	os.Mkdir(configuration.AppConfig.LogsFolderLocation, 0755)
 
 	os.Setenv("CURRTARGET", testCase.steamID)
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
 
-	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, appConfig.UrlMap[testCase.steamID])
+	expectedLogsFile := fmt.Sprintf("%s/%s.txt", configuration.AppConfig.LogsFolderLocation, configuration.AppConfig.UrlMap[testCase.steamID])
 	tempLogFile, err := os.Create(expectedLogsFile)
 	if err != nil {
 		t.Error(err)
@@ -239,7 +232,7 @@ func TestGetFriendsWithInvalidGetFriendsAPICallWhenRetrievingTargetUsersFriends(
 	assert.Empty(t, friends)
 	assert.EqualError(t, err, getFriendsListAPIError.Error())
 
-	os.RemoveAll(appConfig.LogsFolderLocation)
+	os.RemoveAll(configuration.AppConfig.LogsFolderLocation)
 }
 
 func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
@@ -267,9 +260,9 @@ func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
 	}
 
 	// Create a folder to hold the logfile generated
-	os.Mkdir(appConfig.LogsFolderLocation, 0755)
+	os.Mkdir(configuration.AppConfig.LogsFolderLocation, 0755)
 
-	expectedLogsFile := fmt.Sprintf("%s/%s.txt", appConfig.LogsFolderLocation, appConfig.UrlMap[testCase.steamID])
+	expectedLogsFile := fmt.Sprintf("%s/%s.txt", configuration.AppConfig.LogsFolderLocation, configuration.AppConfig.UrlMap[testCase.steamID])
 	tempLogFile, err := os.Create(expectedLogsFile)
 	if err != nil {
 		t.Error(err)
@@ -286,7 +279,7 @@ func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
 	assert.Empty(t, friends)
 	assert.Contains(t, err.Error(), expectedError.Error())
 
-	os.RemoveAll(appConfig.LogsFolderLocation)
+	os.RemoveAll(configuration.AppConfig.LogsFolderLocation)
 }
 
 func TestIsEnvVarSetWithValidEnvVar(t *testing.T) {

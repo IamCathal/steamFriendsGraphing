@@ -23,7 +23,15 @@ type Info struct {
 	UrlMap      map[string]string
 }
 
-func InitConfig(mode string, dontReadCache bool) Info {
+var (
+	AppConfig Info
+)
+
+func SetConfig(config Info) {
+	AppConfig = config
+}
+
+func InitAndSetConfig(mode string, dontReadCache bool) {
 	// baseFolder is the root directory for steamFriendsGraphing
 	baseFolder := ""
 	cacheFolderLocation := ""
@@ -68,10 +76,9 @@ func InitConfig(mode string, dontReadCache bool) Info {
 		urlMap, err = loadMappings(initialisedAppConfig)
 		CheckErr(err)
 	}
-
 	initialisedAppConfig.UrlMap = urlMap
 
-	return initialisedAppConfig
+	SetConfig(initialisedAppConfig)
 }
 
 func loadMappings(appConfig Info) (map[string]string, error) {

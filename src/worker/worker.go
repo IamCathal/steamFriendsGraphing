@@ -53,14 +53,6 @@ type CrawlerConfig struct {
 	APIKeys  []string
 }
 
-var (
-	appConfig configuration.Info
-)
-
-func SetConfig(config configuration.Info) {
-	appConfig = config
-}
-
 // InitWorkerConfig initialises the worker based on the level and worker amount given
 // and returns a WorkerConfig with all fields set
 func InitWorkerConfig(levelCap, workerAmount int) (*WorkerConfig, error) {
@@ -160,7 +152,7 @@ func GetFriends(cntr util.ControllerInterface, job JobsStruct, level int, jobs <
 
 	exists, err := CacheFileExists(cntr, job.CurrentTargetSteamID)
 	if exists {
-		if !appConfig.IgnoreCache {
+		if !configuration.AppConfig.IgnoreCache {
 			friendsObj, err := GetCache(cntr, job.CurrentTargetSteamID)
 			if err != nil {
 				return util.FriendsStruct{}, err
@@ -366,15 +358,15 @@ func LogCall(cntr util.ControllerInterface, method string, job JobsStruct, usern
 
 	logMsg := fmt.Sprintf("%s [%s] %s %s%s%s %vms\n", method, job.CurrentTargetSteamID, username,
 		statusColor, status, "\033[0m", delay)
-	logging.SpecialLog(cntr, appConfig.UrlMap[job.OriginalTargetUserSteamID], logMsg)
+	logging.SpecialLog(cntr, configuration.AppConfig.UrlMap[job.OriginalTargetUserSteamID], logMsg)
 	fmt.Printf("%s", logMsg)
 }
 
 // WriteToFile writes a user's friendlist to a file for later processing
 func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends util.FriendsStruct) error {
-	cacheFolder := appConfig.CacheFolderLocation
+	cacheFolder := configuration.AppConfig.CacheFolderLocation
 	if cacheFolder == "" {
-		return util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
+		return util.MakeErr(errors.New("configuration.AppConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	existing, err := CacheFileExists(cntr, steamID)
@@ -408,7 +400,7 @@ func WriteToFile(cntr util.ControllerInterface, apiKey, steamID string, friends 
 // GetCache gets a user's cached records if it exists
 func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct, error) {
 	var temp util.FriendsStruct
-	cacheFolder := appConfig.CacheFolderLocation
+	cacheFolder := configuration.AppConfig.CacheFolderLocation
 
 	exists, err := CacheFileExists(cntr, steamID)
 	if exists {
@@ -445,16 +437,16 @@ func GetCache(cntr util.ControllerInterface, steamID string) (util.FriendsStruct
 		return temp, err
 	}
 
-	return temp, util.MakeErr(fmt.Errorf("cache file %s/%s.gz does not exist", appConfig.CacheFolderLocation, steamID))
+	return temp, util.MakeErr(fmt.Errorf("cache file %s/%s.gz does not exist", configuration.AppConfig.CacheFolderLocation, steamID))
 }
 
 // GetUsernameFromCacheFile gets the username for a given cache file
 // e.g 76561198063271448 -> moose
 func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (string, error) {
 	var temp util.FriendsStruct
-	cacheFolder := appConfig.CacheFolderLocation
+	cacheFolder := configuration.AppConfig.CacheFolderLocation
 	if cacheFolder == "" {
-		return "", util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
+		return "", util.MakeErr(errors.New("configuration.AppConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	exists, err := CacheFileExists(cntr, steamID)
@@ -497,9 +489,9 @@ func GetUsernameFromCacheFile(cntr util.ControllerInterface, steamID string) (st
 
 // CacheFileExists checks whether a given cached file exists
 func CacheFileExists(cntr util.ControllerInterface, steamID string) (bool, error) {
-	cacheFolder := appConfig.CacheFolderLocation
+	cacheFolder := configuration.AppConfig.CacheFolderLocation
 	if cacheFolder == "" {
-		return false, util.MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
+		return false, util.MakeErr(errors.New("configuration.AppConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	return cntr.FileExists(fmt.Sprintf("%s/%s.gz", cacheFolder, steamID)), nil

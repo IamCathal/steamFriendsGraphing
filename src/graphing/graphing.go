@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-echarts/go-echarts/charts"
 	dijkstra "github.com/iamcathal/dijkstra2"
-	"github.com/steamFriendsGraphing/configuration"
 	"github.com/steamFriendsGraphing/util"
 )
 
@@ -41,14 +40,6 @@ type GraphData struct {
 	ApplyDijkstra bool
 	UsersMap      map[int]string
 	DijkstraGraph *dijkstra.Graph
-}
-
-var (
-	appConfig configuration.Info
-)
-
-func SetConfig(config configuration.Info) {
-	appConfig = config
 }
 
 // graphWorker is the graphing worker queue implementation. It's quite similar to

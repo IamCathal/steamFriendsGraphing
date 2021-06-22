@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/steamFriendsGraphing/configuration"
-	"github.com/steamFriendsGraphing/graphing"
-	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/steamFriendsGraphing/worker"
 	"github.com/stretchr/testify/assert"
@@ -41,15 +39,7 @@ func getAPIKeysForTesting() []string {
 
 func TestMain(m *testing.M) {
 	// Setup apikeys and config or all tests
-	config := configuration.InitConfig("testing", false)
-
-	// Initialise config for all packages that interact
-	// with either log or cache files
-	util.SetConfig(config)
-	worker.SetConfig(config)
-	logging.SetConfig(config)
-	graphing.SetConfig(config)
-
+	configuration.InitAndSetConfig("testing", false)
 	apiKeys = getAPIKeysForTesting()
 
 	os.RemoveAll(config.CacheFolderLocation)

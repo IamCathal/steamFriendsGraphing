@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/steamFriendsGraphing/configuration"
-	"github.com/steamFriendsGraphing/graphing"
-	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/server"
 	"github.com/steamFriendsGraphing/util"
 	"github.com/steamFriendsGraphing/worker"
@@ -25,13 +23,7 @@ func main() {
 	flag.Parse()
 
 	cntr := util.Controller{}
-	appConfig := configuration.InitConfig("normal", *ignorecache)
-
-	util.SetConfig(appConfig)
-	worker.SetConfig(appConfig)
-	logging.SetConfig(appConfig)
-	server.SetConfig(appConfig)
-	graphing.SetConfig(appConfig)
+	configuration.InitAndSetConfig("normal", *ignorecache)
 
 	if *httpserver {
 		server.SetController(cntr)
@@ -82,12 +74,12 @@ func main() {
 
 	switch len(steamIDs) {
 	case 1:
-		err := worker.CrawlOneUser(steamIDs[0], appConfig.UrlMap, cntr, config)
+		err := worker.CrawlOneUser(steamIDs[0], configuration.AppConfig.UrlMap, cntr, config)
 		if err != nil {
 			panic(err)
 		}
 	case 2:
-		err := worker.CrawlTwoUsers(steamIDs[0], steamIDs[1], appConfig.UrlMap, cntr, config)
+		err := worker.CrawlTwoUsers(steamIDs[0], steamIDs[1], configuration.AppConfig.UrlMap, cntr, config)
 		if err != nil {
 			panic(err)
 		}

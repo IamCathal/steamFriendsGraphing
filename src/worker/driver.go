@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/go-echarts/go-echarts/charts"
+	"github.com/steamFriendsGraphing/configuration"
 	"github.com/steamFriendsGraphing/graphing"
 	"github.com/steamFriendsGraphing/util"
 )
@@ -23,14 +24,14 @@ func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.Contro
 			return err
 		}
 
-		finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamID])
+		finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, urlMapping[steamID])
 		err = gData.Render(finishedGraphLocation)
 		if err != nil {
 			return err
 		}
 	}
 
-	finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamID])
+	finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, urlMapping[steamID])
 	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
 	return nil
 }
@@ -45,7 +46,7 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 
 	if usersHaveBeenGraphedBefore := util.IsKeyInMap(steamIDsIdentifier, urlMapping); !usersHaveBeenGraphedBefore {
 		GenerateURL(steamIDsIdentifier, urlMapping)
-		finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
+		finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
 
 		InitCrawling(cntr, config, steamID1)
 		InitCrawling(cntr, config, steamID2)
@@ -107,7 +108,7 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 		graphData.Render(finishedGraphLocation)
 	}
 
-	finishedGraphLocation = fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
+	finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
 	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
 	return nil
 }

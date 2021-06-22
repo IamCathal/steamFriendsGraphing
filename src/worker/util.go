@@ -54,5 +54,5 @@ func getSteamIDsIdentifier(steamIDs []string, urlMap map[string]string) (string,
 func GenerateURL(input string, urlMap map[string]string) {
 	identifier := ksuid.New()
 	urlMap[input] = identifier.String()
-	configuration.WriteMappings(appConfig, urlMap)
+	configuration.WriteMappings(configuration.AppConfig, urlMap)
 }

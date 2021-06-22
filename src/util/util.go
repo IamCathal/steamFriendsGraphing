@@ -19,15 +19,7 @@ var (
 	Green = "\033[32m"
 	Red   = "\033[31m"
 	White = "\033[0;37m"
-
-	appConfig configuration.Info
 )
-
-// SetConfig sets the global config used by various functions
-// to manage cache and logging folder file locations
-func SetConfig(config configuration.Info) {
-	appConfig = config
-}
 
 // GetPlayerSummary gets a player summary through the Steam web API
 func GetPlayerSummary(cntr ControllerInterface, steamID, apiKey string) (Player, error) {
@@ -67,10 +59,10 @@ func GetUserDetails(cntr ControllerInterface, apiKey, steamID string) (Player, e
 // CreateUserDataFolder creates a folder for holding cache.
 // Can either be userData for regular use or testData when running under github actions.
 func CreateUserDataFolder() error {
-	cacheFolder := appConfig.CacheFolderLocation
+	cacheFolder := configuration.AppConfig.CacheFolderLocation
 	if cacheFolder == "" {
-		return MakeErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
-		// ThrowErr(errors.New("appConfig.CacheFolderLocation was not initialised before attempting to write to file"))
+		return MakeErr(errors.New("configuration.AppConfig.CacheFolderLocation was not initialised before attempting to write to file"))
+		// ThrowErr(errors.New("configuration.AppConfig.CacheFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	if _, err := os.Stat(cacheFolder); os.IsNotExist(err) {
@@ -167,7 +159,7 @@ func GetAPIKeys(cntr ControllerInterface) ([]string, error) {
 	}
 
 	// APIKEYS.txt MUST be in the root directory of the project
-	APIKeysLocation := appConfig.ApiKeysFileLocation
+	APIKeysLocation := configuration.AppConfig.ApiKeysFileLocation
 	apiKeys := make([]string, 0)
 
 	file, err := cntr.Open(APIKeysLocation)

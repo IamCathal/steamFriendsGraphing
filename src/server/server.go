@@ -24,13 +24,7 @@ var (
 	// middlewareBlacklist indicates whether
 	// a url is to be ignored by the middleware
 	middlewareBlackList map[string]bool
-	// appConfig yep
-	appConfig configuration.Info
 )
-
-func SetConfig(config configuration.Info) {
-	appConfig = config
-}
 
 // SetController sets the controller used for all functions in the server module
 func SetController(controller util.ControllerInterface) {
@@ -119,9 +113,9 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 
 	// fmt.Printf("%+v\n", crawlConfig)
 
-	go worker.CrawlOneUser(reqConfig.SteamID0, appConfig.UrlMap, util.Controller{}, crawlConfig)
+	go worker.CrawlOneUser(reqConfig.SteamID0, configuration.AppConfig.UrlMap, util.Controller{}, crawlConfig)
 
-	finishedGraphLocation := fmt.Sprintf("%s/%s", appConfig.FinishedGraphsLocation, appConfig.UrlMap[reqConfig.SteamID0])
+	finishedGraphLocation := fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, configuration.AppConfig.UrlMap[reqConfig.SteamID0])
 
 	res := struct {
 		Body string
@@ -151,7 +145,7 @@ func status(w http.ResponseWriter, req *http.Request) {
 }
 
 func home(w http.ResponseWriter, req *http.Request) {
-	http.ServeFile(w, req, filepath.Join(appConfig.StaticDirectoryLocation, "index.html"))
+	http.ServeFile(w, req, filepath.Join(configuration.AppConfig.StaticDirectoryLocation, "index.html"))
 }
 
 func setupRouter() *mux.Router {
@@ -177,7 +171,7 @@ func RunServer(port string) {
 
 	r := setupRouter()
 
-	fs := http.FileServer(http.Dir(appConfig.StaticDirectoryLocation))
+	fs := http.FileServer(http.Dir(configuration.AppConfig.StaticDirectoryLocation))
 	r.PathPrefix("/").Handler(http.StripPrefix("/static", fs))
 
 	log.Printf("Starting web server on http://localhost:%s\n", port)

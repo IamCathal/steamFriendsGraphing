@@ -13,15 +13,6 @@ import (
 	"github.com/steamFriendsGraphing/util"
 )
 
-var (
-	appConfig configuration.Info
-)
-
-// SetConfig sets the app config for all functions in the logging module
-func SetConfig(config configuration.Info) {
-	appConfig = config
-}
-
 // CheckErr is a simple function to replace dozen or so if err != nil statements
 func CheckErr(err error) {
 	if err != nil {
@@ -34,9 +25,9 @@ func CheckErr(err error) {
 
 // SpecialLog logs to file using logrus
 func SpecialLog(cntr util.ControllerInterface, logFileName, msg string) error {
-	logsFolder := appConfig.LogsFolderLocation
+	logsFolder := configuration.AppConfig.LogsFolderLocation
 	if logsFolder == "" {
-		return util.MakeErr(errors.New("appConfig.LogsFolderLocation was not initialised before attempting to write to file"))
+		return util.MakeErr(errors.New("configuration.AppConfig.LogsFolderLocation was not initialised before attempting to write to file"))
 	}
 
 	logg.SetFormatter(&logg.JSONFormatter{})
