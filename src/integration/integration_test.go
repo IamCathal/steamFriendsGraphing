@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -42,17 +43,16 @@ func TestMain(m *testing.M) {
 	configuration.InitAndSetConfig("testing", false)
 	apiKeys = getAPIKeysForTesting()
 
-	os.RemoveAll(config.CacheFolderLocation)
 	// Create test directories for logs and data
-	os.Mkdir(config.CacheFolderLocation, 0755)
-	os.Mkdir(config.LogsFolderLocation, 0755)
-	os.Mkdir(config.FinishedGraphsLocation, 0755)
+	os.Mkdir(configuration.AppConfig.CacheFolderLocation, 0755)
+	os.Mkdir(configuration.AppConfig.LogsFolderLocation, 0755)
+	os.Mkdir(configuration.AppConfig.FinishedGraphsLocation, 0755)
 
 	code := m.Run()
 
-	os.RemoveAll(config.CacheFolderLocation)
-	os.RemoveAll(config.LogsFolderLocation)
-	os.RemoveAll(config.FinishedGraphsLocation)
+	os.RemoveAll((configuration.AppConfig.CacheFolderLocation)
+	os.RemoveAll((configuration.AppConfig.LogsFolderLocation)
+	os.RemoveAll((configuration.AppConfig.FinishedGraphsLocation)
 
 	os.Exit(code)
 }
@@ -71,7 +71,7 @@ func TestGetUsernameFromCacheFile(t *testing.T) {
 		Level:                     1,
 		APIKey:                    apiKeys[0],
 	}
-
+	fmt.Printf("the money: %s\n", configuration.AppConfig.CacheFolderLocation)
 	_, err := worker.GetFriends(cntr, firstJob, 1, jobs)
 	if err != nil {
 		t.Error(err)
