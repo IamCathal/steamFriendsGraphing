@@ -2,7 +2,6 @@ package worker
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/go-echarts/go-echarts/charts"
 	"github.com/steamFriendsGraphing/configuration"
@@ -11,12 +10,11 @@ import (
 )
 
 // CrawlOneUser crawls a single user and generates a graph the specified users friend network
-func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.ControllerInterface, config CrawlerConfig) error {
+func CrawlOneUser(steamID string, cntr util.ControllerInterface, config CrawlerConfig) error {
 	finishedGraphLocation := ""
-	os.Setenv("CURRTARGET", steamID)
 
-	if userHasBeenGraphedBefore := util.IsKeyInMap(steamID, urlMapping); !userHasBeenGraphedBefore {
-		GenerateURL(steamID, urlMapping)
+	if userHasBeenGraphedBefore := util.IsKeyInUrlMap(steamID); !userHasBeenGraphedBefore {
+		GenerateURL(steamID)
 
 		InitCrawling(cntr, config, steamID)
 		gData, err := graphing.InitGraphing(config.Level, config.Workers, steamID)
@@ -24,14 +22,14 @@ func CrawlOneUser(steamID string, urlMapping map[string]string, cntr util.Contro
 			return err
 		}
 
-		finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, urlMapping[steamID])
+		finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, configuration.AppConfig.UrlMap[steamID])
 		err = gData.Render(finishedGraphLocation)
 		if err != nil {
 			return err
 		}
 	}
 
-	finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, urlMapping[steamID])
+	finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, configuration.AppConfig.UrlMap[steamID])
 	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
 	return nil
 }
@@ -44,8 +42,8 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 	}
 	finishedGraphLocation := ""
 
-	if usersHaveBeenGraphedBefore := util.IsKeyInMap(steamIDsIdentifier, urlMapping); !usersHaveBeenGraphedBefore {
-		GenerateURL(steamIDsIdentifier, urlMapping)
+	if usersHaveBeenGraphedBefore := util.IsKeyInUrlMap(steamIDsIdentifier); !usersHaveBeenGraphedBefore {
+		GenerateURL(steamIDsIdentifier)
 		finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
 
 		InitCrawling(cntr, config, steamID1)

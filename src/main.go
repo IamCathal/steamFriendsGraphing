@@ -74,7 +74,7 @@ func main() {
 
 	switch len(steamIDs) {
 	case 1:
-		err := worker.CrawlOneUser(steamIDs[0], configuration.AppConfig.UrlMap, cntr, config)
+		err := worker.CrawlOneUser(steamIDs[0], cntr, config)
 		if err != nil {
 			panic(err)
 		}

@@ -228,8 +228,8 @@ func AllElementsEmpty(list []string) bool {
 }
 
 // IfKeyNotInMap does what it says on the tin
-func IsKeyInMap(key string, inputMap map[string]string) bool {
-	if _, exists := inputMap[key]; exists {
+func IsKeyInUrlMap(key string) bool {
+	if _, exists := configuration.AppConfig.UrlMap[key]; exists {
 		return true
 	}
 	return false

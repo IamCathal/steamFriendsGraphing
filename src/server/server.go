@@ -113,9 +113,47 @@ func crawl(w http.ResponseWriter, req *http.Request) {
 
 	// fmt.Printf("%+v\n", crawlConfig)
 
-	go worker.CrawlOneUser(reqConfig.SteamID0, configuration.AppConfig.UrlMap, util.Controller{}, crawlConfig)
+	go worker.CrawlOneUser(reqConfig.SteamID0, util.Controller{}, crawlConfig)
 
 	finishedGraphLocation := fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, configuration.AppConfig.UrlMap[reqConfig.SteamID0])
+
+	res := struct {
+		Body string
+	}{
+		Body: fmt.Sprintf("Your finished graph will be saved under %s", finishedGraphLocation),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(res)
+	LogCall(req, http.StatusOK, vars["startTime"], false)
+}
+
+func crawlOne(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	finishedGraphLocation := ""
+
+	reqConfig, err := DecodeNewBody(req, vars)
+	if err != nil {
+		sendErrorResponse(w, req, http.StatusBadRequest, vars["startTime"], err.Error())
+		return
+	}
+
+	apiKeys, err := util.GetAPIKeys(cntr)
+	util.CheckErr(err)
+
+	crawlConfig := worker.CrawlerConfig{
+		Level:    reqConfig.Level,
+		StatMode: false,
+		TestKeys: false,
+		Workers:  4,
+		APIKeys:  apiKeys,
+	}
+
+	go worker.CrawlOneUser(reqConfig.SteamIDs[0], util.Controller{}, crawlConfig)
+
+	time.Sleep(10 * time.Millisecond)
+	finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, configuration.AppConfig.UrlMap[reqConfig.SteamIDs[0]])
 
 	res := struct {
 		Body string
@@ -155,6 +193,7 @@ func setupRouter() *mux.Router {
 	r.HandleFunc("/crawl", crawl).Methods("POST")
 	r.HandleFunc("/statlookup", statLookup).Methods("POST")
 	r.HandleFunc("/status", status).Methods("POST")
+	r.HandleFunc("/crawlOne", crawlOne).Methods("POST")
 	r.Use(CrawlMiddleware)
 
 	return r

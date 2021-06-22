@@ -213,7 +213,6 @@ func TestGetFriendsWithInvalidGetFriendsAPICallWhenRetrievingTargetUsersFriends(
 	// Create a folder to hold the logfile generated
 	os.Mkdir(configuration.AppConfig.LogsFolderLocation, 0755)
 
-	os.Setenv("CURRTARGET", testCase.steamID)
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
 
 	expectedLogsFile := fmt.Sprintf("%s/%s.txt", configuration.AppConfig.LogsFolderLocation, configuration.AppConfig.UrlMap[testCase.steamID])
@@ -270,7 +269,6 @@ func TestGetFriendsWithInvalidFormatSteamID(t *testing.T) {
 	defer os.Remove(tempLogFile.Name())
 	mockController.On("OpenFile", expectedLogsFile, mock.AnythingOfType("int"), mock.AnythingOfType("os.FileMode")).Return(tempLogFile, nil)
 
-	os.Setenv("CURRTARGET", testCase.steamID)
 	mockController.On("FileExists", mock.AnythingOfType("string")).Return(false)
 	expectedError := errors.New(fmt.Sprintf("invalid steamID: %s, apikey: %s", testCase.steamID, testCase.apikey))
 

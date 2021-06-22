@@ -81,10 +81,10 @@ func InitAndSetConfig(mode string, dontReadCache bool) {
 	SetConfig(initialisedAppConfig)
 }
 
-func loadMappings(appConfig Info) (map[string]string, error) {
-	urlMapLocation := appConfig.UrlMappingsLocation
+func loadMappings(underConstructionConfig Info) (map[string]string, error) {
+	urlMapLocation := underConstructionConfig.UrlMappingsLocation
 	if urlMapLocation == "" {
-		return nil, MakeErr(errors.New("appConfig.UrlMappingsLocation was not initialised before attempting to load url mappings"))
+		return nil, MakeErr(errors.New("underConstructionConfig.UrlMappingsLocation was not initialised before attempting to load url mappings"))
 	}
 	urlMap := make(map[string]string)
 	byteContent, err := ioutil.ReadFile(urlMapLocation)
@@ -110,8 +110,8 @@ func loadMappings(appConfig Info) (map[string]string, error) {
 	}
 }
 
-func WriteMappings(appConfig Info, urlMap map[string]string) error {
-	urlMapLocation := appConfig.UrlMappingsLocation
+func WriteMappings() error {
+	urlMapLocation := AppConfig.UrlMappingsLocation
 	if urlMapLocation == "" {
 		return MakeErr(errors.New("appConfig.UrlMappingsLocation was not initialised before attempting to write url mappings"))
 	}
@@ -121,8 +121,8 @@ func WriteMappings(appConfig Info, urlMap map[string]string) error {
 	}
 	defer file.Close()
 	file.Seek(0, 0)
-	for key, _ := range urlMap {
-		_, err = file.WriteString(fmt.Sprintf("%s:%s\n", key, urlMap[key]))
+	for key, _ := range AppConfig.UrlMap {
+		_, err = file.WriteString(fmt.Sprintf("%s:%s\n", key, AppConfig.UrlMap[key]))
 		if err != nil {
 			return MakeErr(err)
 		}
