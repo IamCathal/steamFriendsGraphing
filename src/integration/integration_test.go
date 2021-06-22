@@ -50,9 +50,9 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	os.RemoveAll((configuration.AppConfig.CacheFolderLocation)
-	os.RemoveAll((configuration.AppConfig.LogsFolderLocation)
-	os.RemoveAll((configuration.AppConfig.FinishedGraphsLocation)
+	os.RemoveAll(configuration.AppConfig.CacheFolderLocation)
+	os.RemoveAll(configuration.AppConfig.LogsFolderLocation)
+	os.RemoveAll(configuration.AppConfig.FinishedGraphsLocation)
 
 	os.Exit(code)
 }
