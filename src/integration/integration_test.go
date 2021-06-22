@@ -85,7 +85,6 @@ func TestEndToEndCrawlingAndGraphingFunctionalityWithOneUser(t *testing.T) {
 	cntr := util.Controller{}
 
 	targetSteamID := "76561198130544932"
-	mockUrlMap := make(map[string]string)
 	// mockUrlMap[targetSteamID] = "outputGraphFor76561198130544932"
 
 	crawlerConfig := worker.CrawlerConfig{
@@ -96,7 +95,7 @@ func TestEndToEndCrawlingAndGraphingFunctionalityWithOneUser(t *testing.T) {
 		APIKeys:  getAPIKeysForTesting(),
 	}
 
-	err := worker.CrawlOneUser(targetSteamID, mockUrlMap, cntr, crawlerConfig)
+	err := worker.CrawlOneUser(targetSteamID, cntr, crawlerConfig)
 
 	assert.Nil(t, err)
 }
