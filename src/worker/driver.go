@@ -13,7 +13,8 @@ import (
 func CrawlOneUser(steamID string, cntr util.ControllerInterface, config CrawlerConfig) error {
 	finishedGraphLocation := ""
 
-	if userHasBeenGraphedBefore := util.IsKeyInUrlMap(steamID); !userHasBeenGraphedBefore {
+	userHasBeenGraphedBefore := util.IsKeyInUrlMap(steamID)
+	if !userHasBeenGraphedBefore || configuration.AppConfig.AlwaysCrawl {
 		GenerateURL(steamID)
 
 		InitCrawling(cntr, config, steamID)

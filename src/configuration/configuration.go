@@ -19,8 +19,11 @@ type Info struct {
 	FinishedGraphsLocation  string
 	StaticDirectoryLocation string
 
+	// Configuration flags
 	IgnoreCache bool
-	UrlMap      map[string]string
+	AlwaysCrawl bool
+
+	UrlMap map[string]string
 }
 
 var (
@@ -31,7 +34,7 @@ func SetConfig(config Info) {
 	AppConfig = config
 }
 
-func InitAndSetConfig(mode string, dontReadCache bool) {
+func InitAndSetConfig(mode string, dontReadCache, alwaysCrawl bool) {
 	// baseFolder is the root directory for steamFriendsGraphing
 	baseFolder := ""
 	cacheFolderLocation := ""
@@ -68,6 +71,7 @@ func InitAndSetConfig(mode string, dontReadCache bool) {
 		FinishedGraphsLocation:  finishedGraphsLocation,
 		StaticDirectoryLocation: staticDirectoyLocation,
 		IgnoreCache:             dontReadCache,
+		AlwaysCrawl:             alwaysCrawl,
 	}
 
 	urlMap := make(map[string]string)

@@ -19,11 +19,14 @@ func main() {
 	testKeys := flag.Bool("testkeys", false, "Test if all keys in APIKEYS.txt are valid")
 	workers := flag.Int("workers", 2, "Amount of workers used to crawl")
 	httpserver := flag.Bool("httpserver", false, "Run the application as a HTTP server")
+
+	// Configuratiob flags
 	ignorecache := flag.Bool("ignorecache", false, "Don't read from cache")
+	alwaysCrawl := flag.Bool("alwaysCrawl", false, "Crawl any user even if they've been crawled before")
 	flag.Parse()
 
 	cntr := util.Controller{}
-	configuration.InitAndSetConfig("normal", *ignorecache)
+	configuration.InitAndSetConfig("normal", *ignorecache, *alwaysCrawl)
 
 	if *httpserver {
 		server.SetController(cntr)

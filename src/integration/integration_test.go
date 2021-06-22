@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -71,7 +70,6 @@ func TestGetUsernameFromCacheFile(t *testing.T) {
 		Level:                     1,
 		APIKey:                    apiKeys[0],
 	}
-	fmt.Printf("the money: %s\n", configuration.AppConfig.CacheFolderLocation)
 	_, err := worker.GetFriends(cntr, firstJob, 1, jobs)
 	if err != nil {
 		t.Error(err)

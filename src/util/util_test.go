@@ -136,7 +136,7 @@ func TestGetUsernameWithInvalidFormatSteamID(t *testing.T) {
 }
 
 func TestCreateDataFolder(t *testing.T) {
-	configuration.InitAndSetConfig("testing", false)
+	configuration.InitAndSetConfig("testing", false, false)
 
 	err := CreateUserDataFolder()
 
