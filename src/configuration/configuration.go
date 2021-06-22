@@ -56,7 +56,7 @@ func InitAndSetConfig(mode string, dontReadCache, alwaysCrawl bool) {
 		baseFolder = fmt.Sprintf("%s/../", path)
 		cacheFolderLocation = filepath.Join(baseFolder, "userData")
 		logsFolderLocation = filepath.Join(baseFolder, "logs")
-		finishedGraphsLocation = filepath.Join(baseFolder, "finishedGraphs")
+		finishedGraphsLocation = filepath.Join(baseFolder, "static/graph")
 	}
 
 	apiKeysFileLocation = filepath.Join(baseFolder, "APIKEYS.txt")
