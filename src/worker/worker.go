@@ -198,6 +198,7 @@ func GetFriends(cntr util.ControllerInterface, job JobsStruct, level int, jobs <
 			var temp util.FriendsStruct
 			return temp, util.MakeErr(err)
 		}
+		// Do NOT process users with communityvisibilitystate = 1, this means they're private and will fuck up the system
 
 		// Order of received friends is random,
 		// must assign them using map[steamID]username
@@ -273,6 +274,7 @@ func ControlFunc(cntr util.ControllerInterface, apiKeys []string, steamID string
 	if err != nil {
 		log.Fatal(err)
 	}
+	logMsg := ""
 
 	// After level 3 the amount of friends gets CRAZY
 	// Therefore some rapid scaling is needed
@@ -336,12 +338,14 @@ func ControlFunc(cntr util.ControllerInterface, apiKeys []string, steamID string
 	}
 
 	workConfig.Wg.Wait()
-	fmt.Printf("\n=============== Done ================\n")
-	fmt.Printf("Total friends: %d\nCrawled friends: %d\n", totalFriends, reachableFriends)
-	fmt.Printf("Friends per level: %+v\n=====================================\n", friendsPerLevel)
+	logMsg += "\n=============== Done ================\n"
+	logMsg += fmt.Sprintf("Total friends: %d\nCrawled friends: %d\n", totalFriends, reachableFriends)
+	logMsg += fmt.Sprintf("Friends per level: %+v\n=====================================\n", friendsPerLevel)
 	close(jobs)
 	close(results)
 
+	logFileName := fmt.Sprintf("%s/%s.txt", configuration.AppConfig.LogsFolderLocation, configuration.AppConfig.UrlMap[steamID])
+	logging.SpecialLog(cntr, logFileName, logMsg)
 }
 
 // Divmod divides a friendslist into stacks of 100 and the remainder
@@ -359,7 +363,7 @@ func LogCall(cntr util.ControllerInterface, method string, job JobsStruct, usern
 	logMsg := fmt.Sprintf("%s [%s] %s %s%s%s %vms\n", method, job.CurrentTargetSteamID, username,
 		statusColor, status, "\033[0m", delay)
 	logging.SpecialLog(cntr, configuration.AppConfig.UrlMap[job.OriginalTargetUserSteamID], logMsg)
-	fmt.Printf("%s", logMsg)
+	// fmt.Printf("%s", logMsg)
 }
 
 // WriteToFile writes a user's friendlist to a file for later processing

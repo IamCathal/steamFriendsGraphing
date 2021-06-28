@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+
+    <title>SteamFriendsGraphing</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="/static/stylesheets/main.css" rel="stylesheet">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script> 
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+    <!-- Graph stuff-->
+    <script src="https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js"></script>
+    <link href="https://go-echarts.github.io/go-echarts-assets/assets/bulma.min.css" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;400;500;600;700&display=swap" rel="stylesheet">
+
+  </head>
+  <body>
+    
+    <div class="container">
+      <div class="row">
+        <div class="col mt-5">
+          <p class="hugeText text-center shadowText display-2"> SteamFriendsGraphing </p>
+        </div>
+      </div>
+      {{.GraphCode}}
+      <div class="row">
+        <div class="col mt-5">
+          <div class="graphContainer">
+            <div class="item" id="hbormgGDGNiz"
+                 style="width:1800px;height:500px;"></div>
+          </div>
+          <script type="text/javascript">
+              "use strict";
+              var myChart_hbormgGDGNiz = echarts.init(document.getElementById('hbormgGDGNiz'), "white");
+              var option_hbormgGDGNiz = {
+                  title: {},
+                  tooltip: {},
+                  legend: {},
+                  series: [
+                  {"name":"graph","type":"graph","links":[{"source":"ponczo","target":"Ciesli102"},{"source":"ponczo","target":"Sztubek"},{"source":"ponczo","target":"jaroz01"},{"source":"ponczo","target":"Tyxel"},{"source":"ponczo","target":"Marker"},{"source":"ponczo","target":"SIIMEKK"},{"source":"ponczo","target":"DZIADZIO23"},{"source":"ponczo","target":"Gębuś!"},{"source":"ponczo","target":"łysonżi łyżka"},{"source":"ponczo","target":"MEOW"},{"source":"ponczo","target":"abeliakefa"},{"source":"ponczo","target":"Szaman"},{"source":"ponczo","target":"szeket"},{"source":"ponczo","target":"Dyzar"},{"source":"ponczo","target":"El Wróblo"},{"source":"ponczo","target":"mpPako"},{"source":"ponczo","target":"RaIsiN"},{"source":"ponczo","target":"Wikt9182"},{"source":"ponczo","target":"Kancian000"},{"source":"ponczo","target":"Klaudia"},{"source":"ponczo","target":"penetrator"},{"source":"ponczo","target":".:VeXeL_eLLow:."},{"source":"ponczo","target":"Cortex"},{"source":"ponczo","target":"szymi072"},{"source":"ponczo","target":"Univan"},{"source":"ponczo","target":"pretty_girl"},{"source":"ponczo","target":"BLAST"},{"source":"ponczo","target":"⚫"},{"source":"ponczo","target":"kalarz"},{"source":"ponczo","target":"ciesli102UA"},{"source":"ponczo","target":"Ciesli102 (ciesli_94ua)"},{"source":"ponczo","target":"spermolek13"},{"source":"ponczo","target":"OrelCWA"},{"source":"ponczo","target":"Ебать русский"},{"source":"ponczo","target":"weronika888"},{"source":"ponczo","target":"Azyl♪"},{"source":"ponczo","target":"SzYcHix"},{"source":"ponczo","target":"harkonen"},{"source":"ponczo","target":"wihu1997"},{"source":"ponczo","target":"Damyyan"},{"source":"ponczo","target":"OmOMaStOmO"},{"source":"ponczo","target":"Jaszczuchr"},{"source":"ponczo","target":"N!C3 T00 M33T Y0U"},{"source":"ponczo","target":"MikroVIP"},{"source":"ponczo","target":"mpmilosz3 keydrop.com"},{"source":"ponczo","target":"Hubabuba"},{"source":"ponczo","target":"lisek_chytrusek3446"},{"source":"ponczo","target":"rafalpysiak"},{"source":"ponczo","target":"Kezan"},{"source":"ponczo","target":"Kison"},{"source":"ponczo","target":"Bloodray"},{"source":"Swirus","target":"ŁACINHO"},{"source":"Swirus","target":"pTu"},{"source":"Swirus","target":"sido"},{"source":"Swirus","target":"Michalbe"},{"source":"Swirus","target":"ARCZI KeyDrop.com"},{"source":"Swirus","target":"mandrekCzoło"},{"source":"Swirus","target":"SplaTT '"},{"source":"Swirus","target":"Roydener"},{"source":"Swirus","target":"Liburan"},{"source":"Swirus","target":"Sztubek"},{"source":"Swirus","target":"Czareg"},{"source":"Swirus","target":"radek_69 KeyDrop.com"},{"source":"Swirus","target":"Bubus1"},{"source":"Swirus","target":"Wujo"},{"source":"Swirus","target":"DywanDanzig"},{"source":"Swirus","target":"michelangelo"},{"source":"Swirus","target":"Dustie"},{"source":"Swirus","target":"Pelle_606"},{"source":"Swirus","target":"DUŻY MATI"},{"source":"Swirus","target":"asegqs"},{"source":"Swirus","target":"yoshi"},{"source":"Swirus","target":"Jim Lahey KEYDROP"},{"source":"Swirus","target":"Johny"},{"source":"Swirus","target":"ciepskyyy"},{"source":"Swirus","target":"Wiciu"},{"source":"Swirus","target":"łysonżi łyżka"},{"source":"Swirus","target":"Kwiatson"},{"source":"Swirus","target":"LiburaT"},{"source":"Swirus","target":":o"},{"source":"Swirus","target":"abeliakefa"},{"source":"Swirus","target":"kasai"},{"source":"Swirus","target":"SynOjca"},{"source":"Swirus","target":"Crazzz"},{"source":"Swirus","target":"kebs na cienkim"},{"source":"Swirus","target":"Palec"},{"source":"Swirus","target":"Herre_Potter"},{"source":"Swirus","target":"shib3k"},{"source":"Swirus","target":"Jean Claude Van Damme"},{"source":"Swirus","target":"Green"},{"source":"Swirus","target":"TT"},{"source":"Swirus","target":"DobrzeSzczylam"},{"source":"Swirus","target":"K12nDzik"},{"source":"Swirus","target":"Gandalf"},{"source":"Swirus","target":"Filo"},{"source":"Swirus","target":"Jaja Golec"},{"source":"Swirus","target":"Kakarotto KeyDrop.com"},{"source":"Swirus","target":"b00st 4 key's/skins"},{"source":"Swirus","target":"Analny destruktor"},{"source":"Swirus","target":"de_colored"},{"source":"Swirus","target":"blond girl"},{"source":"Swirus","target":"Donkey Kong!"},{"source":"Swirus","target":"Young Slavii"},{"source":"Swirus","target":"Indischer♚"},{"source":"Swirus","target":"OlshocK"},{"source":"Swirus","target":"PioxXx"},{"source":"Swirus","target":"Zjarany Krzyś"},{"source":"Swirus","target":"essa"},{"source":"Swirus","target":"Kumpel Gierczaka"},{"source":"Swirus","target":"Qebonafide"},{"source":"Swirus","target":"Microsoft Publisher"},{"source":"Swirus","target":"Ownship casedrop.eu"},{"source":"Swirus","target":"stryyy"},{"source":"Swirus","target":"Sarastro"},{"source":"Swirus","target":"Mathew"},{"source":"Swirus","target":"JEBAĆ KARAĆ NIE WYRÓŻNIAĆ"},{"source":"Swirus","target":"Femboy Floppa"},{"source":"Swirus","target":"Kaichi"},{"source":"Swirus","target":"poczuty"},{"source":"Swirus","target":"ŁACINHO"}],"layout":"force","force":{"repulsion":34,"gravity":0.16},"roam":true,"focusNodeAdjacency":true,"data":[{"name":"ponczo","itemStyle":{"color":"#38413A"}},{"name":"Ciesli102",},{"name":"Sztubek","itemStyle":{"color":"#38413A"}},{"name":"jaroz01",},{"name":"Tyxel",},{"name":"Marker",},{"name":"SIIMEKK",},{"name":"DZIADZIO23",},{"name":"Gębuś!",},{"name":"łysonżi łyżka",},{"name":"MEOW",},{"name":"abeliakefa",},{"name":"Szaman",},{"name":"szeket",},{"name":"Dyzar",},{"name":"El Wróblo",},{"name":"mpPako",},{"name":"RaIsiN",},{"name":"Wikt9182",},{"name":"Kancian000",},{"name":"Klaudia",},{"name":"penetrator",},{"name":".:VeXeL_eLLow:.",},{"name":"Cortex",},{"name":"szymi072",},{"name":"Univan",},{"name":"pretty_girl",},{"name":"BLAST",},{"name":"⚫",},{"name":"kalarz",},{"name":"ciesli102UA",},{"name":"Ciesli102 (ciesli_94ua)",},{"name":"spermolek13",},{"name":"OrelCWA",},{"name":"Ебать русский",},{"name":"weronika888",},{"name":"Azyl♪",},{"name":"SzYcHix",},{"name":"harkonen",},{"name":"wihu1997",},{"name":"Damyyan",},{"name":"OmOMaStOmO",},{"name":"Jaszczuchr",},{"name":"N!C3 T00 M33T Y0U",},{"name":"MikroVIP",},{"name":"mpmilosz3 keydrop.com",},{"name":"Hubabuba",},{"name":"lisek_chytrusek3446",},{"name":"rafalpysiak",},{"name":"Kezan",},{"name":"Kison",},{"name":"Bloodray",},{"name":"Swirus","itemStyle":{"color":"#38413A"}},{"name":"ŁACINHO",},{"name":"pTu",},{"name":"sido",},{"name":"Michalbe",},{"name":"ARCZI KeyDrop.com",},{"name":"mandrekCzoło",},{"name":"SplaTT '",},{"name":"Roydener",},{"name":"Liburan",},{"name":"Czareg",},{"name":"radek_69 KeyDrop.com",},{"name":"Bubus1",},{"name":"Wujo",},{"name":"DywanDanzig",},{"name":"michelangelo",},{"name":"Dustie",},{"name":"Pelle_606",},{"name":"DUŻY MATI",},{"name":"asegqs",},{"name":"yoshi",},{"name":"Jim Lahey KEYDROP",},{"name":"Johny",},{"name":"ciepskyyy",},{"name":"Wiciu",},{"name":"Kwiatson",},{"name":"LiburaT",},{"name":":o",},{"name":"kasai",},{"name":"SynOjca",},{"name":"Crazzz",},{"name":"kebs na cienkim",},{"name":"Palec",},{"name":"Herre_Potter",},{"name":"shib3k",},{"name":"Jean Claude Van Damme",},{"name":"Green",},{"name":"TT",},{"name":"DobrzeSzczylam",},{"name":"K12nDzik",},{"name":"Gandalf",},{"name":"Filo",},{"name":"Jaja Golec",},{"name":"Kakarotto KeyDrop.com",},{"name":"b00st 4 key's/skins",},{"name":"Analny destruktor",},{"name":"de_colored",},{"name":"blond girl",},{"name":"Donkey Kong!",},{"name":"Young Slavii",},{"name":"Indischer♚",},{"name":"OlshocK",},{"name":"PioxXx",},{"name":"Zjarany Krzyś",},{"name":"essa",},{"name":"Kumpel Gierczaka",},{"name":"Qebonafide",},{"name":"Microsoft Publisher",},{"name":"Ownship casedrop.eu",},{"name":"stryyy",},{"name":"Sarastro",},{"name":"Mathew",},{"name":"JEBAĆ KARAĆ NIE WYRÓŻNIAĆ",},{"name":"Femboy Floppa",},{"name":"Kaichi",},{"name":"poczuty",}],"label":{"show":false},"emphasis":{"label":{"show":true,"color":"black","position":"left"},},"markLine":{"label":{"show":false}},"markPoint":{"label":{"show":false}},"lineStyle":{"color":"#b5b5b5","width":1},},
+                  ],
+                  color: ["#c23531","#2f4554","#61a0a8","#d48265","#91c7ae","#749f83","#ca8622","#bda29a","#6e7074","#546570","#c4ccd3"],
+              };
+              myChart_hbormgGDGNiz.setOption(option_hbormgGDGNiz);
+          </script>
+        </div>
+      </div>
+
+
+      <div class="row">
+        <div class="col mb-3 mt-3">
+          <div style="text-align: center" class="m-1">
+            <p class="display-4 shadowText" style="font-weight:500">eeee {{.ID}}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- spacing lol -->
+      <div class="row mt-5">
+        <div class="col mt-5 mb-5">
+          <div style="text-align: center" class="mt-5 mb-5">
+          </div>
+        </div>
+      </div>
+
+
+      <div class="col mb-5 mt-0">
+        <div style="text-align: center" class="m-1">
+          <div class="row ml-1">
+            <div class="col">
+              <div class="">
+                <p>Check out the source on</p>
+              </div>
+              <div class="text-center mt-1">
+                <a href="https://github.com/IamCathal/steamFriendsGraphing" target="_blank">
+                  <img 
+                    width="26%" 
+                    class="blackLogo"
+                    src="https://github.githubassets.com/images/modules/logos_page/GitHub-Logo.png">
+                </a>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="row">
+          <div class="col" style="text-align: center;">
+            <p>Check out more projects at <a href="https://cathaloc.dev/" target="_blank" style="font-weight: 800;"> cathaloc.dev </a> </p>
+          </div>
+        </div>
+      </footer>
+  </body>
+
+  <script>
+    // If the box is empty change the color to white
+     document.getElementById("steamIDInput").addEventListener("input", () => {
+      const inputBox = document.getElementById("steamIDInput");
+      const inputBoxValue = document.getElementById("steamIDInput").value;
+
+      if (inputBoxValue == "") {
+        inputBox.style.backgroundColor = "#ffffff";
+      }
+    });
+
+    // When the submit button is pressed change to red if given bad input
+    document.getElementById("crawlSubmissionButton").addEventListener("click", () => {
+      const inputBox = document.getElementById("steamIDInput");
+      const steamID64 = inputBox.value;
+      const validSteamIDPattern = /([0-9]){17}/g;
+      
+      if (!steamID64.match(validSteamIDPattern)) {
+        inputBox.style.backgroundColor = "#ffb3b3";
+      }
+    });
+  </script>
+</html>

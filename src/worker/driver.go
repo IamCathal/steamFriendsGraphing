@@ -18,7 +18,7 @@ func CrawlOneUser(steamID string, cntr util.ControllerInterface, config CrawlerC
 		GenerateURL(steamID)
 
 		InitCrawling(cntr, config, steamID)
-		gData, err := graphing.InitGraphing(config.Level, config.Workers, steamID)
+		gData, err := graphing.InitGraphing(cntr, config.Level, config.Workers, steamID)
 		if err != nil {
 			return err
 		}
@@ -31,7 +31,9 @@ func CrawlOneUser(steamID string, cntr util.ControllerInterface, config CrawlerC
 	}
 
 	finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, configuration.AppConfig.UrlMap[steamID])
-	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
+	// fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
+
+	graphing.GenerateGraphPage(cntr, configuration.AppConfig.UrlMap[steamID])
 	return nil
 }
 
@@ -50,11 +52,11 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 		InitCrawling(cntr, config, steamID1)
 		InitCrawling(cntr, config, steamID2)
 
-		StartUserGraphData, err := graphing.InitGraphing(config.Level, config.Workers, steamID1)
+		StartUserGraphData, err := graphing.InitGraphing(cntr, config.Level, config.Workers, steamID1)
 		if err != nil {
 			return err
 		}
-		EndUserGraphData, err := graphing.InitGraphing(config.Level, config.Workers, steamID2)
+		EndUserGraphData, err := graphing.InitGraphing(cntr, config.Level, config.Workers, steamID2)
 		if err != nil {
 			return err
 		}
@@ -108,6 +110,6 @@ func CrawlTwoUsers(steamID1, steamID2 string, urlMapping map[string]string, cntr
 	}
 
 	finishedGraphLocation = fmt.Sprintf("%s/%s", configuration.AppConfig.FinishedGraphsLocation, urlMapping[steamIDsIdentifier])
-	fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
+	// fmt.Printf("Saved as %s.html\n", finishedGraphLocation)
 	return nil
 }

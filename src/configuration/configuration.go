@@ -18,6 +18,7 @@ type Info struct {
 	UrlMappingsLocation     string
 	FinishedGraphsLocation  string
 	StaticDirectoryLocation string
+	TemplateDirectory       string
 
 	// Configuration flags
 	IgnoreCache bool
@@ -43,6 +44,7 @@ func InitAndSetConfig(mode string, dontReadCache, alwaysCrawl bool) {
 	urlMappingsLocation := ""
 	finishedGraphsLocation := ""
 	staticDirectoyLocation := ""
+	templateDirectory := ""
 
 	path, err := os.Getwd()
 	CheckErr(err)
@@ -62,6 +64,7 @@ func InitAndSetConfig(mode string, dontReadCache, alwaysCrawl bool) {
 	apiKeysFileLocation = filepath.Join(baseFolder, "APIKEYS.txt")
 	urlMappingsLocation = filepath.Join(baseFolder, "config/urlMappings.txt")
 	staticDirectoyLocation = filepath.Join(baseFolder, "static/")
+	templateDirectory = filepath.Join(baseFolder, "/templates")
 
 	initialisedAppConfig := Info{
 		CacheFolderLocation:     cacheFolderLocation,
@@ -70,6 +73,7 @@ func InitAndSetConfig(mode string, dontReadCache, alwaysCrawl bool) {
 		UrlMappingsLocation:     urlMappingsLocation,
 		FinishedGraphsLocation:  finishedGraphsLocation,
 		StaticDirectoryLocation: staticDirectoyLocation,
+		TemplateDirectory:       templateDirectory,
 		IgnoreCache:             dontReadCache,
 		AlwaysCrawl:             alwaysCrawl,
 	}
@@ -81,7 +85,6 @@ func InitAndSetConfig(mode string, dontReadCache, alwaysCrawl bool) {
 		CheckErr(err)
 	}
 	initialisedAppConfig.UrlMap = urlMap
-
 	SetConfig(initialisedAppConfig)
 }
 

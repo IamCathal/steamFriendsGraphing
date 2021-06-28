@@ -11,6 +11,8 @@ import (
 
 	"github.com/go-echarts/go-echarts/charts"
 	dijkstra "github.com/iamcathal/dijkstra2"
+	"github.com/steamFriendsGraphing/configuration"
+	"github.com/steamFriendsGraphing/logging"
 	"github.com/steamFriendsGraphing/util"
 )
 
@@ -85,7 +87,7 @@ func graphWorker(id int, jobs <-chan infoStruct, results chan<- infoStruct, wCon
 }
 
 // CrawlCachedFriends builds the graph structure from cached users
-func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData {
+func CrawlCachedFriends(cntr util.ControllerInterface, level, workers int, steamID, username string) *GraphData {
 	jobs := make(chan infoStruct, 500000)
 	results := make(chan infoStruct, 500000)
 
@@ -100,6 +102,8 @@ func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData
 		resMutex:        &resMutex,
 		activeJobsMutex: &activeJobsMutex,
 	}
+
+	logMsg := ""
 
 	nodes := make([]charts.GraphNode, 0)
 	links := make([]charts.GraphLink, 0)
@@ -185,7 +189,7 @@ func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData
 			dijkstraGraph.AddArc(fromNum, usersCount-1, 1)
 			dijkstraGraph.AddArc(usersCount-1, fromNum, 1)
 
-			fmt.Printf("[%d] %s[%s] -> %s[%s]\n", result.level, result.from, result.steamID, result.username, result.steamID)
+			logMsg += fmt.Sprintf("[%d] %s[%s] -> %s[%s]\n", result.level, result.from, result.steamID, result.username, result.steamID)
 			newJob := infoStruct{
 				level:    result.level,
 				steamID:  result.steamID,
@@ -202,7 +206,7 @@ func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData
 	}
 
 	wg.Wait()
-	fmt.Printf("\n============== Done ==============\n")
+	logMsg += "\n============== Done ==============\n"
 	close(jobs)
 	close(results)
 
@@ -215,6 +219,8 @@ func CrawlCachedFriends(level, workers int, steamID, username string) *GraphData
 		UsersMap:      users,
 		DijkstraGraph: dijkstraGraph,
 	}
+	logFileName := fmt.Sprintf("%s/%s.txt", configuration.AppConfig.LogsFolderLocation, configuration.AppConfig.UrlMap[steamID])
+	logging.SpecialLog(cntr, logFileName, logMsg)
 	return gData
 }
 
@@ -346,10 +352,13 @@ func (gData *GraphData) Render(fileName string) error {
 }
 
 // InitGraphing kicks off the graphing process
-func InitGraphing(level, workers int, steamID string) (*GraphData, error) {
-	fmt.Printf("=============================================\n")
-	fmt.Printf("                GRAPHING\n\n")
+func InitGraphing(cntr util.ControllerInterface, level, workers int, steamID string) (*GraphData, error) {
+	logMsg := ""
+	logMsg += "=============================================\n"
+	logMsg += "                GRAPHING\n\n"
+	logFileName := fmt.Sprintf("%s/%s.txt", configuration.AppConfig.LogsFolderLocation, configuration.AppConfig.UrlMap[steamID])
+	logging.SpecialLog(cntr, logFileName, logMsg)
 	username, err := GetUsernameFromCacheFile(steamID)
 
-	return CrawlCachedFriends(level, workers, steamID, username), err
+	return CrawlCachedFriends(cntr, level, workers, steamID, username), err
 }
