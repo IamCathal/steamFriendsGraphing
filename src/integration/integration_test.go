@@ -46,12 +46,14 @@ func TestMain(m *testing.M) {
 	os.Mkdir(configuration.AppConfig.CacheFolderLocation, 0755)
 	os.Mkdir(configuration.AppConfig.LogsFolderLocation, 0755)
 	os.Mkdir(configuration.AppConfig.FinishedGraphsLocation, 0755)
+	os.Mkdir(configuration.AppConfig.TemplateDirectory, 0755)
 
 	code := m.Run()
 
 	os.RemoveAll(configuration.AppConfig.CacheFolderLocation)
 	os.RemoveAll(configuration.AppConfig.LogsFolderLocation)
 	os.RemoveAll(configuration.AppConfig.FinishedGraphsLocation)
+	os.RemoveAll(configuration.AppConfig.TemplateDirectory)
 
 	os.Exit(code)
 }
